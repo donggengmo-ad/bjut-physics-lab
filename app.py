@@ -125,5 +125,5 @@ st.sidebar.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# cd /Users/alexdong/Programme/Daily_Learning/杂项/物理实验数据处理/bjut-physics-lab
+# cd /Users/alexdong/Programme/bjut-physics-lab
 # streamlit run app.py
