@@ -59,19 +59,21 @@ class Experiment:
         return df
 
     def calculate(self):
+        def to_circ_str(x:float|int)->str:
+            return f'{int(m)} ^\circ {int(round((m - int(m))* 100, 0))}'
         # 平均值
         f_df = Experiment.df_deg_to_float(self.final_df)
         m = f_df['phi'].mean()
         m = Experiment.float_to_deg(m)
         m = round(m, 2)
-        m_circ = f'{int(m)} ^\circ {int(round((m - int(m))* 100, 0))}'
+        m_circ = to_circ_str(m)
 
         m = Experiment.deg_to_float(m)
         A = 180 - m
         A = Experiment.float_to_deg(A)
-        A_circ = f'{int(A)} ^\circ {int(round((A - int(A))* 100, 0))}'
+        A_circ = to_circ_str(A)
 
-        phis = [phi for phi in self.final_df['phi']]
+        phis = [to_circ_str(phi) for phi in self.final_df['phi']]
         sums = ' + '.join([f'{phi}' for phi in phis])
 
         st.markdown(f"""
@@ -102,7 +104,6 @@ class Experiment:
         d_phi = np.sqrt(s_phi ** 2 + s_equip ** 2)
         d_phi = Experiment.float_to_deg(d_phi)
         show_d_phi = f'{int(d_phi)} ^\circ {int(round((d_phi - int(d_phi))* 100, 0))}' if d_phi >=1 else f'{int(round((d_phi - int(d_phi))* 100, 0))}\''
-
 
         st.markdown(f"""
                      #### 2.计算A角不确定度

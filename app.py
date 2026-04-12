@@ -57,7 +57,7 @@ st.info('双击表格单元格编辑数据')
 
 # 原始数据表
 upload_file = st.file_uploader(
-    label="可也以上传csv文件",
+    label="上传csv文件",
     type="csv",
     help="列名必须一致，且第一列必须是测量次数，数值格式必须是x.y表示x度y分",
     key='upload_initial_df'
@@ -116,7 +116,11 @@ finally:
 
 # 数据处理
 st.subheader('数据处理')
-exp.calculate()
+try:
+    exp.calculate()
+except Exception as e:
+    st.error(f'出错了：{str(e)}')
+    st.warning('请检查数据填写是否正确')
 
 # 页脚
 st.sidebar.markdown("""
@@ -125,5 +129,5 @@ st.sidebar.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# cd /Users/alexdong/Programme/Daily_Learning/杂项/物理实验数据处理/bjut-physics-lab
+# cd /Users/alexdong/Programme/bjut-physics-lab
 # streamlit run app.py
