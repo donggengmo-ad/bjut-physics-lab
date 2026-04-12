@@ -60,7 +60,8 @@ class Experiment:
 
     def calculate(self):
         def to_circ_str(x:float|int)->str:
-            return f'{int(m)} ^\circ {int(round((m - int(m))* 100, 0))}'
+            return f'{int(x)} ^\circ {int(round((x - int(x))* 100, 0))}' if x >=1 else f'{int(round((x - int(x))* 100, 0))}\''
+
         # 平均值
         f_df = Experiment.df_deg_to_float(self.final_df)
         m = f_df['phi'].mean()
@@ -73,8 +74,8 @@ class Experiment:
         A = Experiment.float_to_deg(A)
         A_circ = to_circ_str(A)
 
-        phis = [to_circ_str(phi) for phi in self.final_df['phi']]
-        sums = ' + '.join([f'{phi}' for phi in phis])
+        phis = [phi for phi in self.final_df['phi']]
+        sums_circ = ' + '.join([f'{to_circ_str(phi)}' for phi in phis])
 
         st.markdown(f"""
              #### 1.计算 $\\phi$ 角和 A 角
@@ -84,7 +85,7 @@ class Experiment:
              $$A = 180\degree - \phi$$
              
              ##### 代入数据
-             $$\\bar\phi = \\frac{{1}}{{6}} ({sums}) = {m_circ}'$$
+             $$\\bar\phi = \\frac{{1}}{{6}} ({sums_circ}) = {m_circ}'$$
              
              $$A = 180\degree - {m_circ} = {A_circ}$$
              
@@ -94,16 +95,16 @@ class Experiment:
         # 不确定度
         s_phi = f_df['phi'].std()
         s_phi = Experiment.float_to_deg(s_phi)
-        phi_circ = [f'{int(phi)} ^\circ {int(round((phi - int(phi))* 100, 0))}' for phi in phis]
+        phi_circ = [to_circ_str(phi) for phi in phis]
         stdsums = ' + '.join([f'({phi}-{m_circ})^2' for phi in phi_circ])
-        show_s_phi = f'{int(s_phi)} ^\circ {int(round((s_phi - int(s_phi))* 100, 0))}' if s_phi >=1 else f'{int(round((s_phi - int(s_phi))* 100, 0))}\''
+        s_phi_circ = to_circ_str(s_phi)
 
         s_equip = Experiment.deg_to_float(0.01)
         s_phi = Experiment.deg_to_float(s_phi)
 
         d_phi = np.sqrt(s_phi ** 2 + s_equip ** 2)
         d_phi = Experiment.float_to_deg(d_phi)
-        show_d_phi = f'{int(d_phi)} ^\circ {int(round((d_phi - int(d_phi))* 100, 0))}' if d_phi >=1 else f'{int(round((d_phi - int(d_phi))* 100, 0))}\''
+        d_phi_circ = to_circ_str(d_phi)
 
         st.markdown(f"""
                      #### 2.计算A角不确定度
@@ -113,9 +114,9 @@ class Experiment:
                      $$\Delta_\phi = \sqrt{{S_\phi^2 + \Delta_仪^2}}$$
 
                      ##### 代入数据
-                     $$S_\phi = \sqrt{{\\frac{{1}}{{5}} {stdsums}}}\\\\ = {show_s_phi}$$
+                     $$S_\phi = \sqrt{{\\frac{{1}}{{5}} {stdsums}}}\\\\ = {s_phi_circ}$$
 
-                     $$\Delta_\phi = \sqrt{{({show_s_phi})^2 + (1')^2}} = {show_d_phi}$$
+                     $$\Delta_\phi = \sqrt{{({s_phi_circ})^2 + (1')^2}} = {d_phi_circ}$$
 
                 """, unsafe_allow_html=True)
 
