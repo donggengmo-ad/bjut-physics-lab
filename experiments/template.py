@@ -1,0 +1,74 @@
+import pandas as pd
+import numpy as np
+import streamlit as st
+import matplotlib.pyplot as plt
+
+
+class Experiment:
+    def __init__(self):
+        self.name = "实验X：XXX"
+        self.description = """
+            ##### 数据说明：  
+            -  
+            ##### 注意事项：  
+            - 
+        """
+        # 数据表
+        self.initial_df = pd.DataFrame({
+            '测量次数': [i + 1 for i in range(6)],
+            'XX': [],
+        })
+        self.calc_df = pd.DataFrame({
+            '测量次数': [i + 1 for i in range(6)],
+            'XX':[]
+        })
+        self.static_col = ['测量次数']
+        self.final_df = self.initial_df.set_index('测量次数').join(self.calc_df.set_index('测量次数'))
+
+    def set_initial_df(self, initial_df: pd.DataFrame):
+        self.initial_df = initial_df
+
+    def fill_data(self):
+        # 写表格计算逻辑
+        df = self.initial_df.set_index('测量次数').join(self.calc_df.set_index('测量次数'))
+
+        self.final_df = df
+
+    def calculate(self):
+        # 计算
+
+        # 显示
+        st.markdown(f"""
+             #### 1.计算
+             ##### 原始公式
+             $$ $$
+
+             $$ $$
+
+             ##### 带入数据
+             $$ $$
+
+             $$ $$
+
+             <br>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"""
+            #### 2.计算
+            ##### 原始公式
+            $$ $$
+
+            $$ $$
+
+            ##### 带入数据
+            $$ $$
+
+            $$ $$
+                """, unsafe_allow_html=True)
+
+    def plot(self):
+        df = self.final_df.copy()
+        st.subheader('')
+        fig, ax = plt.subplots()
+
+
