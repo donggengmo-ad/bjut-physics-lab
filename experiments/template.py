@@ -23,14 +23,15 @@ class Experiment:
             'XX':[]
         })
         self.static_col = ['测量次数']
-        self.final_df = self.initial_df.set_index('测量次数').join(self.calc_df.set_index('测量次数'))
+        self.index = self.static_col[0]
+        self.final_df = self.initial_df.set_index(self.index).join(self.calc_df.set_index(self.index))
 
     def set_initial_df(self, initial_df: pd.DataFrame):
         self.initial_df = initial_df
 
     def fill_data(self):
         # 写表格计算逻辑
-        df = self.initial_df.set_index('测量次数').join(self.calc_df.set_index('测量次数'))
+        df = self.initial_df.set_index(self.index).join(self.calc_df.set_index(self.index))
 
         self.final_df = df
 

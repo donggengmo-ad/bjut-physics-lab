@@ -50,24 +50,28 @@ st.markdown(f"""
     <div class="main-header">{exp.name}</div>
 """, unsafe_allow_html=True)
 st.markdown(exp.description)
+
+# 原始数据表
+st.divider()
 st.markdown(f"""
     <div class="selection-header">原始数据输入</div>
 """, unsafe_allow_html=True)
 st.info('双击表格单元格编辑数据')
 
-# 原始数据表
 upload_file = st.file_uploader(
     label="上传csv文件",
     type="csv",
     help="列名必须一致，且第一列必须是测量次数，数值格式必须是x.y表示x度y分",
     key='upload_initial_df'
 )
+
 if upload_file is not None:
     try:
         imported_df = pd.read_csv(upload_file)
         exp.initial_df = imported_df.drop(columns='Unnamed: 0')
     except Exception as e:
         st.error(f"出错了：{str(e)}")
+
 gb = GridOptionsBuilder.from_dataframe(exp.initial_df)
 gb.configure_default_column(editable=True, resizable=True,
                             sortable=True, filter = False,
@@ -80,9 +84,10 @@ grid_response = AgGrid(
     exp.initial_df,
     gridOptions=grid_options,
     theme='streamlit',
-    update_mode="VALUE_CHANGED",
+    update_mode='VALUE_CHANGED',
 )
 exp.set_initial_df(grid_response['data'].copy())
+
 csv = exp.initial_df.to_csv()
 st.download_button(
     label='下载csv文件',
@@ -93,6 +98,7 @@ st.download_button(
 )
 
 # 计算结果表
+st.divider()
 st.markdown(f"""
     <div class="selection-header">计算结果</div>
 """, unsafe_allow_html=True)
@@ -104,23 +110,26 @@ except Exception as e:
     st.error(f'出错了：{str(e)}')
     st.warning('请检查数据填写是否正确')
 
-finally:
-    csv = exp.final_df.to_csv()
-    st.download_button(
-        label='下载csv文件',
-        data=csv,
-        file_name=f'{exp.name}.csv',
-        mime='text/csv',
-        key='download_final_df'
-    )
+st.info('从表格右上角工具栏下载')
+
 
 # 数据处理
+st.divider()
 st.subheader('数据处理')
 try:
     exp.calculate()
 except Exception as e:
     st.error(f'出错了：{str(e)}')
     st.warning('请检查数据填写是否正确')
+
+# 画图
+st.divider()
+st.subheader('绘图')
+try:
+    exp.plot()
+    st.info('从图片右上角工具栏下载')
+except Exception as e:
+    st.warning('本章节无需绘图')
 
 # 页脚
 st.sidebar.markdown("""

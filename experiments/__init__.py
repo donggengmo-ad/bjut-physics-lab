@@ -1,5 +1,14 @@
 import os
 import importlib
+import re
+
+_CN_ORDER = ['一','二','三','四','五','六','七','八','九','十']
+_CN_INDEX = {ch:i for i,ch in enumerate(_CN_ORDER)}
+def _get_cn_key(name):
+    ch = re.search(r'实验([一二三四五六七八九十])：', name)
+    if ch:
+        return _CN_INDEX[ch.group(0)[2]]
+    return 100
 
 def get_experiments():
     experiments = {}
@@ -14,5 +23,5 @@ def get_experiments():
             exp = module.Experiment()
             experiments[exp.name] = exp
     # 排序并返回
-    sorted_exps = dict(sorted(experiments.items()))
+    sorted_exps = dict(sorted(experiments.items(), key=lambda x:_get_cn_key(x[0])))
     return sorted_exps
