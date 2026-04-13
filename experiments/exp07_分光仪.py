@@ -8,13 +8,13 @@ class Experiment:
         self.name = "实验七：分光计的调节和使用"
         self.description = """
             ##### 数据说明：  
-            - AB1：游标I 测出的 AB面法线theta角  
-            - AB2：游标II 测出的 AB面法线theta角  
-            - AC1：游标I 测出的 AC面法线theta角  
-            - AC2：游标II 测出的 AC面法线theta角  
-            - phi1：AB1 + 360 - AC1  
-            - phi2：AB2 - AC2  
-            - phi：1/2 * (phi1 + phi2)  
+            - AB1：游标I 测出的 AB面法线 $$ \\theta $$ 角  
+            - AB2：游标II 测出的 AB面法线 $$ \\theta $$ 角  
+            - AC1：游标I 测出的 AC面法线 $$ \\theta $$ 角  
+            - AC2：游标II 测出的 AC面法线 $$ \\theta $$ 角  
+            - phi1：$$ AB1 + 360 \\degree - AC1 $$
+            - phi2：$$ AB2 - AC2 $$
+            - phi：$$ \\frac{1}{2} \\times (phi1 + phi2)  $$
             ##### 注意事项：  
             - 填入浮点数 x.y 表示 x度y分，例如 30.15 表示 30度15分  
             - 注意填入顺序，数值大概是 AB1 < AC2 < AB2 < AC1，可能跟你实际测量结果顺序不一样
@@ -119,11 +119,6 @@ class Experiment:
                      $$\Delta_\phi = \sqrt{{({s_phi_circ})^2 + (1')^2}} = {d_phi_circ}$$
 
                 """, unsafe_allow_html=True)
-
-    def plot(self):
-        df = self.final_df.copy()
-        st.subheader('')
-        fig, ax = plt.subplots()
 
     @staticmethod
     def deg_to_float(x: float):
