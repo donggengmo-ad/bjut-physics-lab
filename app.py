@@ -27,6 +27,32 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+    <div id="idy_floatdiv" 
+            style="position:fixed;
+                    display:flex;
+                    right:0;
+                    bottom:15%;
+                    width:40px;
+                    border-top-left-radius:6px;
+                    border-bottom-left-radius:6px;
+                    height:120px;
+                    background:#2cd9e6;
+                    line-height: 24px;
+                    writing-mode:vertical-rl;
+                    align-items:center;
+                    justify-content:center;
+                    font-family:PingFangSC-Regular;
+                    font-size:20px;">
+        <a href="https://wj.qq.com/s2/26323333/b51a/" 
+            target="blank" 
+            style="color:#ffffff;
+            text-decoration:none;">
+            留言
+        </a>
+    </div>
+""", unsafe_allow_html=True)
+
 # 侧边栏
 st.sidebar.title('实验章节')
 # 抽屉版
