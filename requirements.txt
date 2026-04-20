@@ -3,4 +3,7 @@ streamlit~=1.56.0
 streamlit-aggrid~=1.2.1.post2
 numpy~=2.2.6
 matplotlib~=3.10.8
-plotly
+plotly~=6.7.0
+sympy~=1.14.0
+watchdog~=6.0.0
+scipy~=1.15.3

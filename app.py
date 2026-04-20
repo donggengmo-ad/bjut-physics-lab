@@ -84,44 +84,51 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 st.info('双击表格单元格编辑数据')
 
-upload_file = st.file_uploader(
-    label="上传csv文件",
-    type="csv",
-    help="列名必须一致，且第一列必须是测量次数，数值格式必须是x.y表示x度y分",
-    key='upload_initial_df'
-)
+def dynamic_table(exp, key):
+    upload_file = st.file_uploader(
+        label="上传csv文件",
+        type="csv",
+        help="列名必须一致",
+        key=f'upload_initial_df_{key}'
+    )
 
-if upload_file is not None:
-    try:
-        imported_df = pd.read_csv(upload_file)
-        exp.initial_df = imported_df.drop(columns='Unnamed: 0')
-    except Exception as e:
-        st.error(f"出错了：{str(e)}")
+    if upload_file is not None:
+        try:
+            imported_df = pd.read_csv(upload_file)
+            exp.initial_df[key] = imported_df.drop(columns='Unnamed: 0')
+        except Exception as e:
+            st.error(f"出错了：{str(e)}")
 
-gb = GridOptionsBuilder.from_dataframe(exp.initial_df)
-gb.configure_default_column(editable=True, resizable=True,
-                            sortable=True, filter = False,
-                            cellStyle = {'textAlign': 'center'})
-for col in exp.static_col:
-    gb.configure_column(col, editable=False, cellStyle = {'textAlign': 'center', 'backgroundColor': '#f0f0f0'})
-gb.configure_grid_options(domLayout='autoHeight')
-grid_options = gb.build()
-grid_response = AgGrid(
-    exp.initial_df,
-    gridOptions=grid_options,
-    theme='streamlit',
-    update_mode='VALUE_CHANGED',
-)
-exp.set_initial_df(grid_response['data'].copy())
+    gb = GridOptionsBuilder.from_dataframe(exp.initial_df[key])
+    gb.configure_default_column(editable=True, resizable=True,
+                                sortable=True, filter = False,
+                                cellStyle = {'textAlign': 'center'})
+    for col in exp.static_col[key]:
+        gb.configure_column(col, editable=False, cellStyle = {'textAlign': 'center', 'backgroundColor': '#f0f0f0'})
+    gb.configure_grid_options(domLayout='autoHeight')
+    grid_options = gb.build()
+    grid_response = AgGrid(
+        exp.initial_df[key],
+        gridOptions=grid_options,
+        theme='streamlit',
+        update_mode='VALUE_CHANGED',
+    )
+    exp.set_initial_df(grid_response['data'].copy(), key)
 
-csv = exp.initial_df.to_csv()
-st.download_button(
-    label='下载csv文件',
-    data=csv,
-    file_name=f'{exp.name}.csv',
-    mime='text/csv',
-    key='download_initial_df'
-)
+    csv = exp.initial_df[key].to_csv()
+    st.download_button(
+        label='下载csv文件',
+        data=csv,
+        file_name=f'{exp.name}_{key}.csv',
+        mime='text/csv',
+        key=f'download_initial_df_{key}'
+    )
+
+if isinstance(exp.initial_df, dict):
+    for key, df in exp.initial_df.items():
+        st.markdown(f"**{key}**")
+        dynamic_table(exp, key)
+
 
 # 计算结果表
 st.divider()
@@ -130,7 +137,10 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 try:
     exp.fill_data()
-    st.dataframe(exp.final_df)
+    if isinstance(exp.final_df, dict):
+        for key, df in exp.final_df.items():
+            st.markdown(f"**{key}**")
+            st.dataframe(df)
 
 except Exception as e:
     st.error(f'出错了：{str(e)}')
