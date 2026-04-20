@@ -19,26 +19,29 @@ class Experiment:
             - 初始数据是我当时测的，很明显有问题，不要用！！我这节课作业才得6分orz
         """
         # 数据表
-        self.initial_df = pd.DataFrame({
+        self.initial_df = {
+            '数据表':pd.DataFrame({
             'x':[i for i in range(10)],
             'Um':[66.5, 65.5, 62.7, 58.5, 53.4, 47.8, 37.0, 32.3, 28.1, 24.5],
-        })
+            })
+        }
         self.calc_df = pd.DataFrame({
             'x':[i for i in range(10)],
             'Bm测':[0.0] * 10,
             'Bm计':[0.0] * 10,
             'Er':[0.0] * 10
         })
-        self.static_col = ['x']
+        self.key = '数据表'
+        self.static_col = {self.key:['x']}
         self.index = 'x'
-        self.final_df = self.initial_df.set_index(self.index).join(self.calc_df.set_index(self.index))
+        self.final_df = {self.key:self.initial_df[self.key].set_index(self.index).join(self.calc_df.set_index(self.index))}
 
-    def set_initial_df(self, initial_df: pd.DataFrame):
-        self.initial_df = initial_df
+    def set_initial_df(self, initial_df: pd.DataFrame, key:str):
+        self.initial_df[key] = initial_df
 
     def fill_data(self):
         # 写表格计算逻辑
-        df = self.initial_df.set_index(self.index).join(self.calc_df.set_index(self.index)).reset_index()
+        df = self.initial_df['数据表'].set_index(self.index).join(self.calc_df.set_index(self.index)).reset_index()
 
         for i, (Um, x) in enumerate(zip(df['Um'], df['x'])):
             BmCe = (Um * 1e-3) * 5.958 * 1e-4 / (6100 * ((11.7 * 1e-3) ** 2)) * 1e5
@@ -49,11 +52,11 @@ class Experiment:
             df.loc[i, 'Bm计'] = round(BmJi, 2)
             df.loc[i, 'Er'] = round(Er/100, 3)
 
-        self.final_df = df.set_index(self.index)
+        self.final_df[self.key] = df.set_index(self.index)
 
     def calculate(self):
         # 计算
-        samp = self.final_df.reset_index().loc[1].copy() # 只显示一个
+        samp = self.final_df[self.key].reset_index().loc[1].copy() # 只显示一个
         Er = round(samp['Er'] * 100, 1)
         Er = f'{Er:.1f}'
 
@@ -79,7 +82,7 @@ class Experiment:
         """, unsafe_allow_html=True)
 
     def plot(self):
-        df = self.final_df.copy().reset_index()
+        df = self.final_df[self.key].copy().reset_index()
         fig = px.line(df, x='x', y=['Bm测', 'Bm计'], title='Bm-x曲线图', markers=True)
 
         st.plotly_chart(fig)

@@ -18,25 +18,26 @@ class Experiment:
             - 初始值是我当时测的，仅供参考，可能不准
         """
         # 数据表
-        self.initial_df = pd.DataFrame({
+        self.key = '数据表'
+        self.initial_df = {self.key:pd.DataFrame({
             '环的级别':[50, 49, 48, 47, 46, 45, 20, 19, 18, 17, 16, 15],
             '左':[30.659, 30.600, 30.549, 30.496, 30.435, 30.372, 28.691, 28.610, 28.522, 28.438, 28.345, 28.252],
             '右':[19.375, 19.430, 19.482, 19.545, 19.590, 19.658, 21.339, 21.417, 21.502, 21.580, 21.681, 21.767],
-        })
+        })}
         self.calc_df = pd.DataFrame({
             '环的级别':[50, 49, 48, 47, 46, 45, 20, 19, 18, 17, 16, 15],
             'd':[0] * 12,
             'dm2-dn2':[0] * 12
         })
-        self.static_col = ['环的级别']
-        self.final_df = self.initial_df.set_index('环的级别').join(self.calc_df.set_index('环的级别'))
+        self.static_col = {self.key:['环的级别']}
+        self.final_df = {self.key:self.initial_df[self.key].set_index('环的级别').join(self.calc_df.set_index('环的级别'))}
 
-    def set_initial_df(self, initial_df: pd.DataFrame):
-        self.initial_df = initial_df
+    def set_initial_df(self, initial_df: pd.DataFrame, key: str):
+        self.initial_df[key] = initial_df
 
     def fill_data(self):
         # 写表格计算逻辑
-        df = self.initial_df.set_index('环的级别').join(self.calc_df.set_index('环的级别')).reset_index()
+        df = self.initial_df[self.key].set_index('环的级别').join(self.calc_df.set_index('环的级别')).reset_index()
 
         df['d'] = df['左'] - df['右']
 
@@ -47,11 +48,11 @@ class Experiment:
 
         df = df.apply(lambda x: round(x, 3))
 
-        self.final_df = df
+        self.final_df[self.key] = df
 
     def calculate(self):
         # 平均值
-        df = self.final_df.copy()
+        df = self.final_df[self.key].copy()
         d_series = df[df['dm2-dn2'] != 0]
         d_mean = round(d_series.mean()[-1], 3)
 

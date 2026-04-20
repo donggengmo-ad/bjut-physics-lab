@@ -21,30 +21,32 @@ class Experiment:
             - 初始值是我当时测的，仅供参考，可能不准
         """
         # 数据表
-        self.initial_df = pd.DataFrame({
+        self.key = '数据表'
+        self.initial_df = {self.key:pd.DataFrame({
             '测量次数': [i + 1 for i in range(6)],
             'AB1':[56.12, 56.09, 56.10, 56.13, 56.12, 56.13],
             'AB2':[236.06, 236.04, 236.05, 236.08, 236.06, 236.08],
             'AC1':[296.05, 296.07, 296.06, 296.05, 296.09, 296.06],
             'AC2':[116.05, 116.08, 116.08, 116.06, 116.13, 116.08],
-        })
+            })
+        }
         self.calc_df = pd.DataFrame({
             '测量次数': [i + 1 for i in range(6)],
             'phi1': [0] * 6,
             'phi2': [0] * 6,
             'phi': [0] * 6
         })
-        self.static_col = ['测量次数']
-        self.final_df = self.initial_df.set_index('测量次数').join(self.calc_df.set_index('测量次数'))
+        self.static_col = {self.key:['测量次数']}
+        self.final_df = {self.key:self.initial_df[self.key].set_index('测量次数').join(self.calc_df.set_index('测量次数'))}
         # 其他数值
         self.result = None
 
-    def set_initial_df(self, initial_df: pd.DataFrame):
-        self.initial_df = initial_df
+    def set_initial_df(self, initial_df: pd.DataFrame, key: str):
+        self.initial_df[key] = initial_df
 
     def fill_data(self):
         # 写表格计算逻辑
-        df = self.initial_df.set_index('测量次数').join(self.calc_df.set_index('测量次数'))
+        df = self.initial_df[self.key].set_index('测量次数').join(self.calc_df.set_index('测量次数'))
         df = Experiment.df_deg_to_float(df)
 
         df['phi1'] = df['AB1'] - df['AC1'] + 360
@@ -55,7 +57,7 @@ class Experiment:
 
         df['phi'] = round(df['phi'], 2)
 
-        self.final_df = df
+        self.final_df[self.key] = df
         return df
 
     def calculate(self):
@@ -63,7 +65,7 @@ class Experiment:
             return f'{int(x)} ^\circ {int(round((x - int(x))* 100, 0))}' if x >=1 else f'{int(round((x - int(x))* 100, 0))}\''
 
         # 平均值
-        f_df = Experiment.df_deg_to_float(self.final_df)
+        f_df = Experiment.df_deg_to_float(self.final_df[self.key])
         m = f_df['phi'].mean()
         m = Experiment.float_to_deg(m)
         m = round(m, 2)
@@ -74,7 +76,7 @@ class Experiment:
         A = Experiment.float_to_deg(A)
         A_circ = to_circ_str(A)
 
-        phis = [phi for phi in self.final_df['phi']]
+        phis = [phi for phi in f_df['phi']]
         sums_circ = ' + '.join([f'{to_circ_str(phi)}' for phi in phis])
 
         st.markdown(f"""
