@@ -225,12 +225,18 @@ class Experiment:
         k = res.slope
         b = res.intercept
         y_fit = k * x + b
-        fig = px.scatter(x=x, y=y, labels={'x':'砝码质量 (g)', 'y':'ni (cm)'}, title='望远镜读数与砝码质量关系')
+        fig = px.scatter(x=x, y=y, labels={'x':'砝码质量/kg', 'y':'ni/cm'}, title='望远镜读数与砝码质量关系')
         fig.add_trace(px.line(x=x, y=y_fit).data[0])
         eq_text = f'y={k:.3f}x+{b:.3f}'
         fig.add_annotation(
             x=0.5, y=0.95, xref='paper', yref='paper',
             text=eq_text, showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(
+            xaxis=dict(
+                tickmode='array',
+                tickvals=[i for i in range(10)]
+            )
         )
         #fig.update_layout(title='拟合直线', xaxis_title='砝码质量 (g)', yaxis_title='ni (cm)')
         st.plotly_chart(fig)
