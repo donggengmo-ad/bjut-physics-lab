@@ -3,7 +3,7 @@ import streamlit as st
 from st_aggrid import aggrid_utils
 
 from experiments import get_experiments
-from st_aggrid import AgGrid, GridOptionsBuilder
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # 页面配置
 st.set_page_config(
@@ -111,7 +111,7 @@ def dynamic_table(exp, key):
         exp.initial_df[key],
         gridOptions=grid_options,
         theme='streamlit',
-        update_mode='VALUE_CHANGED',
+        update_mode=GridUpdateMode.VALUE_CHANGED,
     )
     exp.set_initial_df(grid_response['data'].copy(), key)
 
