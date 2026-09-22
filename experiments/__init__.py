@@ -21,7 +21,13 @@ def get_experiments():
             module = importlib.import_module(module_name)
             # 获取模块中的Experiment类
             exp = module.Experiment()
-            experiments[exp.name] = exp
+            exp.volume = getattr(exp, 'volume', '上册')
+            exp.number = getattr(exp, 'number', _get_cn_key(exp.name) + 1)
+            exp.experiment_id = getattr(exp, 'experiment_id', module_name)
+            experiments[exp.experiment_id] = exp
     # 排序并返回
-    sorted_exps = dict(sorted(experiments.items(), key=lambda x:_get_cn_key(x[0])))
+    sorted_exps = dict(sorted(
+        experiments.items(),
+        key=lambda x: (0 if x[1].volume == '上册' else 1, x[1].number),
+    ))
     return sorted_exps

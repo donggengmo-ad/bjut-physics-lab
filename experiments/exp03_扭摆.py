@@ -154,7 +154,7 @@ class Experiment:
         i_the_rod = (1.0 / 12.0) * m["金属细杆"] * l ** 2
 
         denom = t1 ** 2 - t0 ** 2
-        k = 4 * np.pi * i_the_plastic / denom
+        k = 4 * np.pi * np.pi * i_the_plastic / denom
         i0 = i_the_plastic * t0 ** 2 / denom
 
         i_exp_plate = i0
@@ -178,7 +178,7 @@ class Experiment:
             ##### 带入数据
             $$ I_{{\\text{{塑料,理}}}} = \\frac{{1}}{{8}} \\times {m['塑料圆柱']:.5f} \\times ({d1:.5f})^2 = {i_the_plastic:.6e}\\;kg\\cdot m^2 $$
             
-            $$ K = \\frac{{4\\pi \\times {i_the_plastic:.6e}}}{{({t1:.6f})^2 - ({t0:.6f})^2}} = {k:.6e} $$
+            $$ K = \\frac{{4\\pi^2 \\times {i_the_plastic:.6e}}}{{({t1:.6f})^2 - ({t0:.6f})^2}} = {k:.6e} $$
             
             $$ I_0 = {i_the_plastic:.6e} \\times \\frac{{({t0:.6f})^2}}{{({t1:.6f})^2 - ({t0:.6f})^2}} = {i0:.6e}\\;kg\\cdot m^2 $$
         """, unsafe_allow_html=True)

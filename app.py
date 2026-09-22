@@ -62,18 +62,27 @@ st.sidebar.title('实验章节')
 with st.sidebar:
     experiments = get_experiments()
     exp_list = list(experiments.keys())
-    if 'select_exp' not in st.session_state:
+    if st.session_state.get('select_exp') not in experiments:
         st.session_state.select_exp = exp_list[0]
-    for name in exp_list:
-        if st.button(name):
-            st.session_state.select_exp = name
-            st.rerun()
+    for volume in ('上册', '下册'):
+        st.subheader(volume)
+        for experiment_id, experiment in experiments.items():
+            if experiment.volume == volume and st.button(experiment.name, key=experiment_id):
+                st.session_state.select_exp = experiment_id
+                st.rerun()
 selected_exp = st.session_state.select_exp
 exp = experiments[selected_exp]
+# 新实验的输入需要跨重运行及章节切换保留，旧实验维持原有流程。
+if hasattr(exp, 'render_inputs'):
+    state_key = f'experiment_{exp.experiment_id}'
+    if state_key not in st.session_state:
+        st.session_state[state_key] = exp
+    exp = st.session_state[state_key]
+page_name = f'{exp.volume} · {exp.name}'
 
 # 主界面
 st.markdown(f"""
-    <div class="main-header">{exp.name}</div>
+    <div class="main-header">{page_name}</div>
 """, unsafe_allow_html=True)
 st.markdown(exp.description)
 
@@ -89,13 +98,13 @@ def dynamic_table(exp, key):
         label="上传csv文件",
         type="csv",
         help="列名必须一致",
-        key=f'upload_initial_df_{key}'
+        key=f'upload_initial_df_{exp.experiment_id}_{key}'
     )
 
     if upload_file is not None:
         try:
             imported_df = pd.read_csv(upload_file)
-            exp.initial_df[key] = imported_df.drop(columns='Unnamed: 0')
+            exp.initial_df[key] = imported_df.drop(columns='Unnamed: 0', errors='ignore')
         except Exception as e:
             st.error(f"出错了：{str(e)}")
 
@@ -112,6 +121,7 @@ def dynamic_table(exp, key):
         gridOptions=grid_options,
         theme='streamlit',
         update_mode=GridUpdateMode.VALUE_CHANGED,
+        key=f'grid_{exp.experiment_id}_{key}',
     )
     exp.set_initial_df(grid_response['data'].copy(), key)
 
@@ -121,10 +131,12 @@ def dynamic_table(exp, key):
         data=csv,
         file_name=f'{exp.name}_{key}.csv',
         mime='text/csv',
-        key=f'download_initial_df_{key}'
+        key=f'download_initial_df_{exp.experiment_id}_{key}'
     )
 
-if isinstance(exp.initial_df, dict):
+if hasattr(exp, 'render_inputs'):
+    exp.render_inputs()
+elif isinstance(exp.initial_df, dict):
     for key, df in exp.initial_df.items():
         st.markdown(f"**{key}**")
         dynamic_table(exp, key)
@@ -165,7 +177,10 @@ try:
     exp.plot()
     st.info('从图片右上角工具栏下载')
 except Exception as e:
-    st.warning('本章节无需绘图')
+    if hasattr(exp, 'render_inputs'):
+        st.error(f'绘图出错了：{str(e)}')
+    else:
+        st.warning('本章节无需绘图')
 
 # 页脚
 st.sidebar.markdown("""
