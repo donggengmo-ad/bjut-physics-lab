@@ -65,7 +65,15 @@ KEY = '表 4-1：测量光栅常数'
 def default_tables():
     return {KEY: pd.DataFrame({ORDER: [0, *([1] * 4), *([2] * 4)],
         SPECTRAL: ['0级', *COLORS, *COLORS], WAVE: [math.nan, *WAVELENGTHS, *WAVELENGTHS],
-        **{column: [None] * 9 for column in ANGLES}})}
+        # 用户提供的表 4-1：一、二级交换左右读数，零级保持原表位置。
+        ANGLES[0]: ['235°56′', '243°25′', '245°15′', '245°49′', '245°53′',
+                    '251°05′', '254°54′', '256°00′', '256°10′'],
+        ANGLES[1]: ['55°50′', '63°20′', '65°10′', '65°44′', '65°50′',
+                    '71°00′', '74°50′', '76°57′', '76°05′'],
+        ANGLES[2]: [None, '228°28′', '226°30′', '225°56′', '225°53′',
+                    '220°45′', '216°47′', '216°32′', '215°30′'],
+        ANGLES[3]: [None, '48°22′', '46°27′', '45°51′', '45°47′',
+                    '40°40′', '36°43′', '35°30′', '35°27′']})}
 
 
 def compute(inputs):
@@ -157,8 +165,8 @@ def get_spec():
                     help='度.分，例如 30.15 表示 30°15′；也支持 30:15。' if c in ANGLES else None,
                     format='%.1f' if c==WAVE else None) for c in frame), (ORDER, SPECTRAL, WAVE),
                     optional_cells=tuple((0, c) for c in ANGLES)),),
-        (ParameterSpec('length_mm', '照亮光栅的长度 l / mm', None, positive=True, optional=True),
-         ParameterSpec('grating_number', '光栅编号', '', kind='text', optional=True)),
+        (ParameterSpec('length_mm', '照亮光栅的长度 l / mm', 30.0, positive=True, optional=True),
+         ParameterSpec('grating_number', '光栅编号', '1', kind='text', optional=True)),
         compute, explain, format_tables=format_tables, build_plot=build_plot, plot_kind='matplotlib',
         plot_caption='圆点实线为一级，方点虚线为二级；测量缺失处断开。', discussion=DISCUSSION)
 

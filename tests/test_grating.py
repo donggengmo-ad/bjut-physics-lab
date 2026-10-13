@@ -44,7 +44,22 @@ class GratingCalculations(unittest.TestCase):
         self.assertEqual(len(frame), 9)
         self.assertEqual(frame[WAVE].iloc[1:].tolist(),
                          [435.8, 546.1, 577.0, 579.0] * 2)
-        self.assertTrue(frame[list(ANGLES)].isna().all().all())
+        expected_angles = [
+            ('235°56′', '55°50′', None, None),
+            ('243°25′', '63°20′', '228°28′', '48°22′'),
+            ('245°15′', '65°10′', '226°30′', '46°27′'),
+            ('245°49′', '65°44′', '225°56′', '45°51′'),
+            ('245°53′', '65°50′', '225°53′', '45°47′'),
+            ('251°05′', '71°00′', '220°45′', '40°40′'),
+            ('254°54′', '74°50′', '216°47′', '36°43′'),
+            ('256°00′', '76°57′', '216°32′', '35°30′'),
+            ('256°10′', '76°05′', '215°30′', '35°27′'),
+        ]
+        self.assertEqual(list(frame[list(ANGLES)].itertuples(index=False, name=None)), expected_angles)
+        self.assertEqual(experiment.inputs.parameters, {'length_mm': 30.0, 'grating_number': '1'})
+        self.assertEqual(experiment.inputs.sources[experiment.input_key], '示例')
+        experiment.fill_data()
+        self.assertEqual(experiment.spacing_count, 8)
 
     def test_degree_minute_parsing_and_validation(self):
         for value in ['30.15', '30:15', '30°15′', '30度15分']:
@@ -96,6 +111,7 @@ class GratingCalculations(unittest.TestCase):
     def test_partial_cursor_and_zero_order_do_not_fabricate_results(self):
         experiment = Experiment()
         frame = experiment.initial_df[experiment.input_key].copy()
+        frame[list(ANGLES)] = None
         frame.loc[0, list(ANGLES)] = ['350.00', '170.00', '10.00', '190.00']
         frame.loc[1, [ANGLES[0], ANGLES[2]]] = ['350.00', '10.00']
         experiment.set_initial_df(frame, experiment.input_key)
@@ -166,10 +182,20 @@ class GratingCalculations(unittest.TestCase):
             plt.close(fig)
 
     def test_actual_app_blank_and_filled_states(self):
+        from experiments import get_spec
+
         eid = 'lower_04_diffraction_grating'
         app = open_app(eid)
         self.assertFalse(app.exception)
         self.assertFalse(app.error)
+        default_session = app.session_state['lab_sessions'][eid]
+        self.assertEqual(default_session.inputs.parameters['length_mm'], 30.0)
+        self.assertEqual(default_session.inputs.parameters['grating_number'], '1')
+        self.assertEqual(default_session.result.values['spacing_count'], 8)
+        self.assertEqual(app.number_input[0].value, 30.0)
+        self.assertEqual(app.text_input[0].value, '1')
+        default_session.replace(get_spec(eid).initial_state(blank=True))
+        app.run()
         self.assertEqual(len(app.table), 2)
         self.assertIn('577.0', app.table[0].value[r'$\lambda/\mathrm{nm}$'].tolist())
         sample = sample_experiment()
@@ -181,7 +207,7 @@ class GratingCalculations(unittest.TestCase):
         formulas = '\n'.join(item.value for item in app.latex)
         self.assertIn(r'\psi_{\text{实}}', formulas)
         self.assertIn(r'\psi_{\text{理}}', formulas)
-        app.number_input(key=f'{eid}:parameter:length_mm:1').set_value(12.0).run()
+        app.number_input(key=f'{eid}:parameter:length_mm:2').set_value(12.0).run()
         self.assertFalse(app.exception)
         self.assertTrue(math.isfinite(app.session_state['lab_sessions'][eid].result.values['slit_count']))
         self.assertIn('分辨本领', '\n'.join(item.value for item in app.markdown))
