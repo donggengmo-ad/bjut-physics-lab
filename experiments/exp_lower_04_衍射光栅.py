@@ -38,17 +38,12 @@ def number_text(value, digits=4):
     return text
 
 
-def interval_dispersion(phi_a, phi_b, lambda_a, lambda_b, order, spacing):
-    """Δφ/Δλ：角差转为 rad，理论值在区间中点角处计算。"""
-    result = dict(delta_phi=math.nan, measured=math.nan, theoretical=math.nan, approximate=math.nan)
+def interval_dispersion(phi_a, phi_b, lambda_a, lambda_b):
+    """相邻谱线的实验角色散率：角差转为 rad。"""
+    result = dict(delta_phi=math.nan, measured=math.nan)
     if math.isfinite(phi_a) and math.isfinite(phi_b):
         delta_phi = math.radians(phi_b - phi_a)
         result.update(delta_phi=delta_phi, measured=delta_phi / (lambda_b - lambda_a))
-        midpoint = math.radians((phi_a + phi_b) / 2)
-        if math.isfinite(spacing) and spacing > 0 and math.cos(midpoint) > 1e-12:
-            result['theoretical'] = order / (spacing * math.cos(midpoint))
-    if math.isfinite(spacing) and spacing > 0:
-        result['approximate'] = order / spacing
     return result
 
 from core.models import (ColumnSpec, TableSpec, ParameterSpec, ExperimentSpec,
@@ -60,6 +55,8 @@ DESCRIPTION = '\n##### 数据说明\n- 表 4-1：记录零级位置及一、二�
 
 ID = 'lower_04_diffraction_grating'
 KEY = '表 4-1：测量光栅常数'
+DISPERSION_THEORY = '角色散率理论值'
+DISPERSION_MEASURED = '角色散率实验值'
 
 
 def default_tables():
@@ -98,40 +95,46 @@ def compute(inputs):
     mean_spacing = float(spacings.mean()) if spacing_count else math.nan
     slit_count = length_mm * 1e6 / mean_spacing if length_mm is not None and math.isfinite(mean_spacing) else math.nan
     records = []
-    midpoints = {}
     for order in (1, 2):
         group = frame.loc[frame[ORDER] == order].reset_index(drop=True)
         for interval in range(3):
             first, last = group.iloc[interval], group.iloc[interval + 1]
-            midpoints[(order, interval)] = (first[PHI] + last[PHI]) / 2
-            interval_result = interval_dispersion(first[PHI], last[PHI], first[WAVE], last[WAVE], order, mean_spacing)
+            interval_result = interval_dispersion(first[PHI], last[PHI], first[WAVE], last[WAVE])
             records.append({ORDER: order, '谱线区间': f'{first[SPECTRAL]}—{last[SPECTRAL]}',
                 'Δλ / nm': last[WAVE] - first[WAVE], 'Δφ / rad': interval_result['delta_phi'],
-                'ψ实 / (rad/nm)': interval_result['measured'], 'ψ理 / (rad/nm)': interval_result['theoretical'],
-                'k/d̄ / (rad/nm)': interval_result['approximate']})
+                'ψ实 / (rad/nm)': interval_result['measured']})
     dispersion = pd.DataFrame(records)
+    theoretical_dispersion = pd.DataFrame({ORDER: [1, 2],
+        'ψ理 / (rad/nm)': [k / mean_spacing if math.isfinite(mean_spacing) and mean_spacing > 0 else math.nan
+                          for k in (1, 2)]})
     if spacing_count < 8:
         notes.append(f'已完成 {spacing_count}/8 条非零级谱线；平均光栅常数仅使用已完成记录。')
     if length_mm is None:
         notes.append('未填写照亮长度 l，暂不能计算分辨本领。')
-    return ResultBundle({KEY: frame, '角色散率': dispersion},
+    return ResultBundle({KEY: frame, DISPERSION_THEORY: theoretical_dispersion, DISPERSION_MEASURED: dispersion},
         dict(input_key=KEY, length_mm=length_mm, grating_number=inputs.parameters['grating_number'],
              mean_spacing=mean_spacing, slit_count=slit_count, spacing_count=spacing_count,
-             dispersion=dispersion, midpoints=midpoints, input_issues=notes, resolving_power={k: k*slit_count for k in (1,2)}), notes,
+             dispersion=dispersion, input_issues=notes, resolving_power={k: k*slit_count for k in (1,2)}), notes,
         (Metric('平均光栅常数', significant(mean_spacing, 4, trailing=True), 'nm'),
          Metric('有效谱线', f'{spacing_count}/8'), Metric('照亮缝数 N', significant(slit_count, 4, trailing=True))))
 
 
 def format_dispersion(result):
-    display = result.tables['角色散率'].copy()
+    display = result.tables[DISPERSION_MEASURED].copy()
     for column in display.columns[2:]:
         display[column] = display[column].map(lambda v: '$' + latex_number(v, 3, trailing=True) + '$' if math.isfinite(v) else '—')
     display['谱线区间'] = display['谱线区间'].map(lambda text: '\u2060'.join(text))
     return display.rename(columns={ORDER: '$k$', '谱线区间': '谱线',
         'Δλ / nm': r'$\Delta\lambda/\mathrm{nm}$', 'Δφ / rad': r'$\Delta\varphi/\mathrm{rad}$',
-        'ψ实 / (rad/nm)': r'$\psi_{\mathrm{实}}/(\mathrm{rad/nm})$',
-        'ψ理 / (rad/nm)': r'$\psi_{\mathrm{理}}/(\mathrm{rad/nm})$',
-        'k/d̄ / (rad/nm)': r'$(k/\bar{d})/(\mathrm{rad/nm})$'})
+        'ψ实 / (rad/nm)': r'$\psi_{\mathrm{实}}/(\mathrm{rad/nm})$'})
+
+
+def format_theoretical_dispersion(result):
+    display = result.tables[DISPERSION_THEORY].copy()
+    display['ψ理 / (rad/nm)'] = display['ψ理 / (rad/nm)'].map(
+        lambda v: '$' + latex_number(v, 3, trailing=True) + '$' if math.isfinite(v) else '—')
+    return display.rename(columns={ORDER: '$k$',
+        'ψ理 / (rad/nm)': r'$\psi_{\mathrm{理}}=k/\bar d\;(\mathrm{rad/nm})$'})
 
 
 def format_tables(inputs, result):
@@ -154,7 +157,9 @@ def format_tables(inputs, result):
         PHI: r'$\varphi=(\varphi_{\mathrm{I}}+\varphi_{\mathrm{II}})/2$',
         SPACING: r'$d_i/\mathrm{nm}$',
     }
-    return [DisplayTable(KEY, display.rename(columns=headers), math=True), DisplayTable('角色散率', dispersion, math=True)]
+    return [DisplayTable(KEY, display.rename(columns=headers), math=True),
+            DisplayTable(DISPERSION_THEORY, format_theoretical_dispersion(result), math=True),
+            DisplayTable(DISPERSION_MEASURED, dispersion, math=True)]
 
 
 def get_spec():
@@ -204,8 +209,14 @@ def explain(inputs, result):
     doc.markdown('**2. 色散曲线、角色散率和光谱特点**')
     doc.markdown('在同一张图中绘制 k=1、k=2 的 φ–λ 曲线，图见“图表”标签页。')
     doc.latex(r'\psi_{\text{实}}=\frac{\Delta\varphi}{\Delta\lambda},\qquad'
-             r'\psi_{\text{理}}=\frac{k}{\overline d\cos\varphi}\approx\frac{k}{\overline d}')
-    doc.caption('按曲线上相邻测量点计算 Δφ/Δλ，角差换算为 rad；ψ理取该区间的中点角。')
+             r'\psi_{\text{理}}=\frac{k}{\overline d}\quad\text{（小角度近似）}')
+    doc.caption('理论值按 k/d̄ 计算，每个级次仅一个值；实验值取相邻测量点的 Δφ/Δλ，角差换算为 rad。')
+    doc.table(format_theoretical_dispersion(result))
+    for _, row in result.tables[DISPERSION_THEORY].iterrows():
+        if math.isfinite(row['ψ理 / (rad/nm)']):
+            order = int(row[ORDER])
+            doc.latex(rf'\psi_{{\text{{理}},k={order}}}=\frac{{{order}}}{{{number_text(data_mean_spacing, digits=6)}}}'
+                      rf'\approx{number_text(row["ψ理 / (rad/nm)"], digits=3)}\,\mathrm{{rad/nm}}')
     doc.table(format_dispersion(result))
     for order in (1, 2):
         group = frame.loc[frame[ORDER] == order].reset_index(drop=True)
@@ -221,11 +232,6 @@ def explain(inputs, result):
                          rf'({last[PHI]:.6g}-{first[PHI]:.6g})\times\pi/180'
                          rf'}}{{{last[WAVE]:.1f}-{first[WAVE]:.1f}}}'
                          rf'\approx{number_text(record["ψ实 / (rad/nm)"], digits=3)}\,\mathrm{{rad/nm}}')
-                if math.isfinite(record['ψ理 / (rad/nm)']):
-                    midpoint = result.values['midpoints'][(order, interval)]
-                    doc.latex(rf'\psi_{{\text{{理}},{order}}}=\frac{{{order}}}{{'
-                             rf'{number_text(data_mean_spacing, digits=6)}\cos({angle_text(midpoint)})'
-                             rf'}}\approx{number_text(record["ψ理 / (rad/nm)"], digits=3)}\,\mathrm{{rad/nm}}')
     comparisons = []
     for color in COLORS:
         group = frame.loc[(frame[SPECTRAL] == color) & frame[PHI].notna()]

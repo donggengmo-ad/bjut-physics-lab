@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from experiments.exp_lower_04_衍射光栅 import (
-    ANGLES, ORDER, PHI, PHI_I, PHI_II, SPACING, WAVE,
+    ANGLES, DISPERSION_THEORY, DISPERSION_MEASURED, ORDER, PHI, PHI_I, PHI_II, SPACING, WAVE,
     angle_text, diffraction_angle, parse_angle,
 )
 from experiment_case import ExperimentCase, open_app, select_view
@@ -103,9 +103,15 @@ class GratingCalculations(unittest.TestCase):
         phi_a, phi_b = frame.at[1, PHI], frame.at[2, PHI]
         self.assertAlmostEqual(interval['ψ实 / (rad/nm)'],
                                math.radians(phi_b-phi_a)/(546.1-435.8))
-        self.assertAlmostEqual(interval['ψ理 / (rad/nm)'],
-                               1/(mean*math.cos(math.radians((phi_a+phi_b)/2))))
-        self.assertAlmostEqual(interval['k/d̄ / (rad/nm)'], 1/mean)
+        theory = experiment.final_df[DISPERSION_THEORY]
+        self.assertEqual(theory[ORDER].tolist(), [1, 2])
+        self.assertEqual(len(theory), 2)
+        self.assertAlmostEqual(theory['ψ理 / (rad/nm)'].iloc[0], 1/mean)
+        self.assertAlmostEqual(theory['ψ理 / (rad/nm)'].iloc[1], 2/mean)
+        measured = experiment.final_df[DISPERSION_MEASURED]
+        self.assertEqual(len(measured), 6)
+        self.assertNotIn('ψ理 / (rad/nm)', measured.columns)
+        self.assertNotIn('k/d̄ / (rad/nm)', measured.columns)
         self.assertTrue(frame.loc[0, [PHI, SPACING]].isna().all())
 
     def test_partial_cursor_and_zero_order_do_not_fabricate_results(self):
@@ -196,7 +202,9 @@ class GratingCalculations(unittest.TestCase):
         self.assertEqual(app.text_input[0].value, '1')
         default_session.replace(get_spec(eid).initial_state(blank=True))
         app.run()
-        self.assertEqual(len(app.table), 2)
+        self.assertEqual(len(app.table), 3)
+        self.assertEqual(len(app.table[1].value), 2)
+        self.assertEqual(len(app.table[2].value), 6)
         self.assertIn('577.0', app.table[0].value[r'$\lambda/\mathrm{nm}$'].tolist())
         sample = sample_experiment()
         app.session_state['lab_sessions'][eid].replace(sample.inputs)

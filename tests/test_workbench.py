@@ -136,6 +136,31 @@ class PublicContracts(unittest.TestCase):
 
 
 class WorkbenchEntry(unittest.TestCase):
+    def test_changed_compute_definition_refreshes_result_without_resetting_draft(self):
+        from dataclasses import replace
+
+        eid = 'lower_04_diffraction_grating'
+        app = open_app(eid)
+        session = app.session_state['lab_sessions'][eid]
+        before = backup_bytes(get_spec(eid), session.inputs)
+        count = session.calculation_count
+        spec = get_spec(eid)
+
+        def updated_compute(inputs):
+            result = spec.compute(inputs)
+            result.values['updated_definition'] = True
+            return result
+
+        with patch('ui.workbench.get_spec', return_value=replace(spec, compute=updated_compute)):
+            app.run()
+            self.assertFalse(app.exception)
+            session = app.session_state['lab_sessions'][eid]
+            self.assertTrue(session.result.values['updated_definition'])
+            self.assertEqual(before, backup_bytes(spec, session.inputs))
+            self.assertEqual(session.calculation_count, count + 1)
+            app.run()
+            self.assertEqual(app.session_state['lab_sessions'][eid].calculation_count, count + 1)
+
     def test_all_pages_views_default_and_blank(self):
         for entry in EXPERIMENTS:
             with self.subTest(experiment=entry.id):

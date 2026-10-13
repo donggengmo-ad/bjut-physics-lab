@@ -11,6 +11,11 @@ from ui.state import get_session
 def render_experiment(experiment_id):
     spec = get_spec(experiment_id)
     session = get_session(experiment_id)
+    definitions = st.session_state.setdefault('lab_compute_definitions', {})
+    if definitions.get(experiment_id) is not spec.compute:
+        # 热更新计算定义后重算已有草稿，避免旧结果表结构进入新的展示函数。
+        session.evaluated_revision = -1
+        definitions[experiment_id] = spec.compute
     st.caption(f'{spec.volume} / 实验 {spec.number:02d}')
     st.title(spec.title)
     st.write(spec.introduction)
