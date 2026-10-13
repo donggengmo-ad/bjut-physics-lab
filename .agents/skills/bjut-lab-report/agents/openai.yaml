@@ -1,0 +1,6 @@
+interface:
+  display_name: "BJUT 物理实验规范"
+  short_description: "逐项遵守实验报告，保留原始记录，规范公式代入、有效位数与简明思考题"
+  default_prompt: "使用 $bjut-lab-report 完成本项目任务，严格对应报告要求，保留最新测量记录与更正范围，并核对公式代入、单位和有效位数。"
+policy:
+  allow_implicit_invocation: true

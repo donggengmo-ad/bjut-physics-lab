@@ -42,6 +42,7 @@ python -m unittest discover -s tests -v
 
 ## 开发与验收
 
+- [项目实验规范 skill](.agents/skills/bjut-lab-report/SKILL.md)：由根目录 `AGENTS.md` 要求每次项目任务先使用，统一报告内容、数据更正、公式代入、有效位数和思考题规范。
 - [新增实验与数据契约](docs/architecture.md)
 - [验收记录与性能比较](docs/validation.md)
 - [保留的专项问题与数值变化](docs/numerical-notes.md)
