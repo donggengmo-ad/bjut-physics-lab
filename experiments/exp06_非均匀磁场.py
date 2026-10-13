@@ -1,88 +1,79 @@
-import pandas as pd
+"""实验定义、纯计算及展示内容；无 Streamlit 状态。"""
+
+import math
 import numpy as np
-import streamlit as st
-import matplotlib.pyplot as plt
-import plotly.express as px
+import pandas as pd
+
+from core.models import (ColumnSpec, TableSpec, ParameterSpec, ExperimentSpec,
+                         ResultBundle, Metric, Explanation, DisplayTable, ValidationIssue)
+from core.formatting import significant, latex_number
+
+ID = 'upper_06_magnetic_field'
+TITLE = '实验六：非均匀磁场测量'
+DESCRIPTION = '\n            ##### 数据说明：  \n            - x：距原点距离，单位cm\n            - Um：毫伏表读数，单位mV\n            - Bm测、Bm计、Er与实验报告一一对应\n            ##### 注意事项：  \n            - 表格里Er是小数，显示计算时乘以100%了，注意区分\n            - Bm测与Bm计的单位是 $10 ^ {{-5}} T$\n            - 初始数据是我当时测的，很明显有问题，不要用！！我这节课作业才得6分orz\n        '
+DEFAULT_DATA = {'数据表': {'x': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+         'Um': [66.5, 65.5, 62.7, 58.5, 53.4, 47.8, 37.0, 32.3, 28.1, 24.5]}}
 
 
-class Experiment:
-    def __init__(self):
-        self.name = "实验六：非均匀磁场测量"
-        self.description = """
-            ##### 数据说明：  
-            - x：距原点距离，单位cm
-            - Um：毫伏表读数，单位mV
-            - Bm测、Bm计、Er与实验报告一一对应
-            ##### 注意事项：  
-            - 表格里Er是小数，显示计算时乘以100%了，注意区分
-            - Bm测与Bm计的单位是 $10 ^ {{-5}} T$
-            - 初始数据是我当时测的，很明显有问题，不要用！！我这节课作业才得6分orz
-        """
-        # 数据表
-        self.initial_df = {
-            '数据表':pd.DataFrame({
-            'x':[i for i in range(10)],
-            'Um':[66.5, 65.5, 62.7, 58.5, 53.4, 47.8, 37.0, 32.3, 28.1, 24.5],
-            })
-        }
-        self.calc_df = pd.DataFrame({
-            'x':[i for i in range(10)],
-            'Bm测':[0.0] * 10,
-            'Bm计':[0.0] * 10,
-            'Er':[0.0] * 10
-        })
-        self.key = '数据表'
-        self.static_col = {self.key:['x']}
-        self.index = 'x'
-        self.final_df = {self.key:self.initial_df[self.key].set_index(self.index).join(self.calc_df.set_index(self.index))}
+def default_tables():
+    return {key: pd.DataFrame(values) for key, values in DEFAULT_DATA.items()}
 
-    def set_initial_df(self, initial_df: pd.DataFrame, key:str):
-        self.initial_df[key] = initial_df
+KEY = '数据表'
 
-    def fill_data(self):
-        # 写表格计算逻辑
-        df = self.initial_df['数据表'].set_index(self.index).join(self.calc_df.set_index(self.index)).reset_index()
 
-        for i, (Um, x) in enumerate(zip(df['Um'], df['x'])):
-            BmCe = (Um * 1e-3) * 5.958 * 1e-4 / (6100 * ((11.7 * 1e-3) ** 2)) * 1e5
-            BmJi = 12.57 * 1e-7 * 6100 * 0.01 * 1e-3 / (np.sqrt(2) * (0.01 + (x * 1e-2) ** 2) ** (3 / 2)) * 1e5
-            Er = abs(BmCe - BmJi) / BmJi * 100
+def compute(inputs):
+    frame = inputs.tables[KEY].copy()
+    um = frame['Um'].to_numpy(dtype=float)
+    x = frame['x'].to_numpy(dtype=float)
+    measured = um*1e-3*5.958e-4/(6100*(11.7e-3)**2)*1e5
+    theoretical = 12.57e-7*6100*.01*1e-3/(np.sqrt(2)*(.01+(x*1e-2)**2)**1.5)*1e5
+    frame['Bm测'], frame['Bm计'] = measured, theoretical
+    frame['Er'] = abs(measured-theoretical)/theoretical
+    maximum = float(np.nanmax(measured)) if np.isfinite(measured).any() else math.nan
+    return ResultBundle({KEY: frame}, summary=(Metric('最大测量磁感应强度', significant(maximum, 4), '×10⁻⁵ T'),))
 
-            df.loc[i, 'Bm测'] = round(BmCe, 2)
-            df.loc[i, 'Bm计'] = round(BmJi, 2)
-            df.loc[i, 'Er'] = round(Er/100, 3)
 
-        self.final_df[self.key] = df.set_index(self.index)
+def format_tables(inputs, result):
+    display = result.tables[KEY].copy()
+    for column in ('Bm测','Bm计'):
+        display[column] = display[column].map(lambda v: f'{v:.2f}' if math.isfinite(v) else '—')
+    display['Er'] = display['Er'].map(lambda v: f'{v:.3f}' if math.isfinite(v) else '—')
+    return [DisplayTable(KEY,display)]
 
-    def calculate(self):
-        # 计算
-        samp = self.final_df[self.key].reset_index().loc[1].copy() # 只显示一个
-        Er = round(samp['Er'] * 100, 1)
-        Er = f'{Er:.1f}'
 
-        # 显示
-        st.markdown(f"""
-             #### 计算Bm测，Bm记录和Er
-             ##### 原始公式
-             $$ B_{{m_测}} = 5.958 \\times 10^{{-4}} \\cdot \\frac{{U_m}}{{Nd_0^2}} $$
+def explain(inputs, result):
+    doc = Explanation()
+    doc.markdown('**磁感应强度与相对误差**')
+    doc.latex(r'B_{m,\mathrm{测}}=5.958\times10^{-4}\frac{U_m}{Nd_0^2}')
+    doc.latex(r'B_{m,\mathrm{计}}=\frac{\mu_0N_0\bar R^2I}{\sqrt2(\bar R^2+x^2)^{3/2}}')
+    doc.latex(r'E_r=\frac{|B_{m,\mathrm{测}}-B_{m,\mathrm{计}}|}{B_{m,\mathrm{计}}}\times100\%')
+    valid = result.tables[KEY].dropna(subset=['Um'])
+    sample = valid.loc[valid['x']==1]
+    if sample.empty: sample = valid.head(1)
+    if sample.empty:
+        doc.info('填写毫伏表读数后显示代入过程。')
+        return doc
+    row = sample.iloc[0]
+    doc.caption(f'以 x={row["x"]:g} cm 的记录为例；表中 Er 为小数，下式为百分数。')
+    doc.latex(rf'B_{{m,\mathrm{{测}}}}=5.958\times10^{{-4}}\frac{{{row["Um"]:g}\times10^{{-3}}}}{{6100\times(11.7\times10^{{-3}})^2}}={row["Bm测"]:.2f}\times10^{{-5}}\,\mathrm{{T}}')
+    doc.latex(rf'B_{{m,\mathrm{{计}}}}=\frac{{12.57\times10^{{-7}}\times6100\times0.1^2\times10^{{-3}}}}{{\sqrt2[0.1^2+({row["x"]:g}\times10^{{-2}})^2]^{{3/2}}}}={row["Bm计"]:.2f}\times10^{{-5}}\,\mathrm{{T}}')
+    doc.latex(rf'E_r=\frac{{|{row["Bm测"]:.2f}-{row["Bm计"]:.2f}|}}{{{row["Bm计"]:.2f}}}\times100\%={row["Er"]*100:.1f}\%')
+    return doc
 
-             $$ B_{{m_计}} = \\frac {{\mu_0 N_0 \\bar R^2 I}} {{ \sqrt{{2}} \left(\\bar R^2 + x^2 \\right)^{{\\frac{{3}}{{2}} }} }} $$
 
-             $$ E_r = \\frac{{ |B_{{m_测}} - B_{{m_计}}| }}{{B_{{m_计}}}} \\times 100 \% $$
+def build_plot(inputs, result):
+    import plotly.graph_objects as go
+    frame = result.tables[KEY]
+    fig = go.Figure()
+    for column, dash, symbol in [('Bm测','solid','circle'),('Bm计','dash','diamond')]:
+        fig.add_scatter(x=frame['x'],y=frame[column],mode='lines+markers',name=column,
+                        line={'dash':dash},marker={'symbol':symbol},connectgaps=False)
+    fig.update_layout(title='非均匀磁场 Bm–x 曲线',xaxis_title='位置 x / cm',yaxis_title='磁感应强度 Bm / (10⁻⁵ T)')
+    return fig
 
-             ##### 带入数据
-             $$ B_{{m_测}} = 5.958 \\times 10^{{-4}} \\times \\frac{{{samp['Um']} \\times 10^{{-3}}}}{{6100 \\times (11.7 \\times 10^{{-3}})^2}} = {samp['Bm测']:.2f} \\times 10^{{-5}} T $$
-                
-             $$ B_{{m_计}} = \\frac {{12.57 \\times 10^{{-7}} \\times 6100 \\times 0.1^2 \\times 1 \\times 10^{{-3}}}} {{ \sqrt{{2}} \left(0.1^2 + {samp['x']}^2 \\right)^{{\\frac{{3}}{{2}} }} }} = {samp['Bm计']:.2f} \\times 10^{{-5}} T $$
-                
-             $$ E_r = \\frac{{ |{samp['Bm测']} - {samp['Bm计']}| }}{{{samp['Bm计']}}} \\times 100 \% = {Er} 100 \% $$
 
-            *（老师说写一个就可以，所以这里只显示x=1时的数据啦）*
-             <br>
-        """, unsafe_allow_html=True)
-
-    def plot(self):
-        df = self.final_df[self.key].copy().reset_index()
-        fig = px.line(df, x='x', y=['Bm测', 'Bm计'], title='Bm-x曲线图', markers=True)
-
-        st.plotly_chart(fig)
+def get_spec():
+    frame = default_tables()[KEY]
+    return ExperimentSpec(ID,TITLE,'上册',6,'由毫伏表读数计算磁感应强度，比较空间分布与理论值。',DESCRIPTION,
+        (TableSpec(KEY,KEY,frame,(ColumnSpec('x'),ColumnSpec('Um',minimum=0.)),('x',)),),(),
+        compute,explain,format_tables=format_tables,build_plot=build_plot)

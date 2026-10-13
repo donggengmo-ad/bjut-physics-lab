@@ -1,78 +1,34 @@
+"""复制后填写稳定 ID，并在 experiments/__init__.py 注册。"""
+import math
 import pandas as pd
-import numpy as np
-import streamlit as st
-import matplotlib.pyplot as plt
+from core.models import ColumnSpec, TableSpec, ExperimentSpec, ResultBundle, Metric, Explanation
+from core.formatting import significant
+from core.numerics import finite_mean
+
+ID = 'lower_00_example'
+KEY = '测量记录'
 
 
-class Experiment:
-    def __init__(self):
-        self.name = "实验X：XXX"
-        self.description = """
-            ##### 数据说明：  
-            -  
-            ##### 注意事项：  
-            - 
-        """
-        # 数据表
-        self.key = 'key'
-        self.initial_df = {
-            self.key:pd.DataFrame({
-                '测量次数': [i + 1 for i in range(6)],
-                'XX': [],
-            })
-        }
-        self.calc_df = pd.DataFrame({
-            '测量次数': [i + 1 for i in range(6)],
-            'XX':[]
-        })
-        self.static_col = {self.key:['测量次数']}
-        self.index = self.static_col[0]
-        self.final_df = {self.key:self.initial_df[self.key].set_index(self.index).join(self.calc_df.set_index(self.index))}
-
-    def set_initial_df(self, initial_df: pd.DataFrame, key: str):
-        self.initial_df[key] = initial_df
-
-    def fill_data(self):
-        # 写表格计算逻辑
-        df = self.initial_df[self.key].set_index(self.index).join(self.calc_df.set_index(self.index))
-
-        self.final_df[self.key] = df
-
-    def calculate(self):
-        # 计算
-
-        # 显示
-        st.markdown(f"""
-             #### 1.计算
-             ##### 原始公式
-             $$ $$
-
-             $$ $$
-
-             ##### 带入数据
-             $$ $$
-
-             $$ $$
-
-             <br>
-        """, unsafe_allow_html=True)
-
-        st.markdown(f"""
-            #### 2.计算
-            ##### 原始公式
-            $$ $$
-
-            $$ $$
-
-            ##### 带入数据
-            $$ $$
-
-            $$ $$
-                """, unsafe_allow_html=True)
-
-    def plot(self):
-        df = self.final_df[self.key].copy()
-        st.subheader('')
-        fig, ax = plt.subplots()
+def compute(inputs):
+    frame = inputs.tables[KEY].copy()
+    mean = finite_mean(frame['长度 / mm'])
+    return ResultBundle({KEY: frame}, {'mean': mean},
+                        summary=(Metric('平均长度', significant(mean, 4), 'mm'),))
 
 
+def explain(inputs, result):
+    document = Explanation()
+    document.latex(r'\bar{x}=\frac{1}{n}\sum_{i=1}^{n}x_i')
+    if math.isfinite(result.values['mean']):
+        document.markdown(f"平均长度：{significant(result.values['mean'], 4)} mm。")
+    else:
+        document.info('填写至少一个测量值后计算平均值。')
+    return document
+
+
+def get_spec():
+    frame = pd.DataFrame({'次数': [1, 2, 3], '长度 / mm': [math.nan] * 3})
+    return ExperimentSpec(ID, '示例实验', '下册', 0, '填写测量值，计算平均值。',
+        '请补充实验原理、单位、仪器和有效位数要求。',
+        (TableSpec(KEY, KEY, frame, (ColumnSpec('次数'), ColumnSpec('长度 / mm', minimum=0.)), ('次数',)),),
+        (), compute, explain)

@@ -1,33 +1,33 @@
-import os
-import importlib
-import re
+"""轻量显式注册表，选中页面时才加载实验。"""
+from dataclasses import dataclass
+from functools import lru_cache
+from importlib import import_module
 
-_CN_ORDER = ['一','二','三','四','五','六','七','八','九','十']
-_CN_INDEX = {ch:i for i,ch in enumerate(_CN_ORDER)}
-def _get_cn_key(name):
-    ch = re.search(r'实验([一二三四五六七八九十])：', name)
-    if ch:
-        return _CN_INDEX[ch.group(0)[2]]
-    return 100
+@dataclass(frozen=True)
+class ExperimentEntry:
+    id: str
+    volume: str
+    number: int
+    title: str
+    module: str
+    icon: str
 
-def get_experiments():
-    experiments = {}
-    # 遍历当前目录下的所有文件
-    for name in os.listdir(os.path.dirname(__file__)):
-        # 找以"exp"开头, ".py" 结尾的文件
-        if name.startswith("exp") and name.endswith(".py"):
-            # 导入模块
-            module_name = f'experiments.{name.replace(".py", "")}'
-            module = importlib.import_module(module_name)
-            # 获取模块中的Experiment类
-            exp = module.Experiment()
-            exp.volume = getattr(exp, 'volume', '上册')
-            exp.number = getattr(exp, 'number', _get_cn_key(exp.name) + 1)
-            exp.experiment_id = getattr(exp, 'experiment_id', module_name)
-            experiments[exp.experiment_id] = exp
-    # 排序并返回
-    sorted_exps = dict(sorted(
-        experiments.items(),
-        key=lambda x: (0 if x[1].volume == '上册' else 1, x[1].number),
-    ))
-    return sorted_exps
+EXPERIMENTS = (
+    ExperimentEntry('upper_02_elasticity', '上册', 2, '金属弹性模量', 'exp02_弹性模量', 'straighten'),
+    ExperimentEntry('upper_03_torsion', '上册', 3, '扭摆与转动惯量', 'exp03_扭摆', 'rotate_right'),
+    ExperimentEntry('upper_06_magnetic_field', '上册', 6, '非均匀磁场', 'exp06_非均匀磁场', 'explore'),
+    ExperimentEntry('upper_07_spectrometer', '上册', 7, '分光计', 'exp07_分光仪', 'architecture'),
+    ExperimentEntry('upper_08_newton_rings', '上册', 8, '牛顿环', 'exp08_牛顿环', 'blur_circular'),
+    ExperimentEntry('upper_09_franck_hertz', '上册', 9, '弗兰克–赫兹', 'exp09_弗兰克赫兹', 'show_chart'),
+    ExperimentEntry('lower_02_resonance', '下册', 2, '交流电路谐振', 'exp_lower_02_交流电路谐振', 'graphic_eq'),
+    ExperimentEntry('lower_04_diffraction_grating', '下册', 4, '衍射光栅', 'exp_lower_04_衍射光栅', 'flare'),
+    ExperimentEntry('lower_05_sound_speed', '下册', 5, '声速测量', 'exp_lower_05_声速测量', 'waves'),
+    ExperimentEntry('lower_06_millikan_oil_drop', '下册', 6, '密立根油滴', 'exp_lower_06_密立根油滴', 'water_drop'),
+)
+
+@lru_cache(maxsize=10)
+def get_spec(experiment_id):
+    entry = next((e for e in EXPERIMENTS if e.id == experiment_id), None)
+    if entry is None:
+        raise KeyError(f'未知实验：{experiment_id}')
+    return import_module(f'experiments.{entry.module}').get_spec()

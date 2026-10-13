@@ -1,0 +1,21 @@
+[theme]
+base = "light"
+primaryColor = "#0969DA"
+font = "sans-serif"
+baseFontSize = 16
+baseRadius = "6px"
+headingFontSizes = ["1.875rem", "1.5rem", "1.25rem", "1.125rem", "1rem", "1rem"]
+
+[theme.light]
+primaryColor = "#0969DA"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F6F8FA"
+textColor = "#1F2328"
+borderColor = "#D8DEE4"
+
+[theme.dark]
+primaryColor = "#58A6FF"
+backgroundColor = "#0D1117"
+secondaryBackgroundColor = "#161B22"
+textColor = "#E6EDF3"
+borderColor = "#30363D"

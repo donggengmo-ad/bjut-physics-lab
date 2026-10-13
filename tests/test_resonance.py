@@ -5,8 +5,13 @@ import unittest
 import pandas as pd
 
 from experiments.exp_lower_02_交流电路谐振 import (
-    CURRENT, FREQ, UR, Experiment, analyze_curve, scan_table,
+    CURRENT, FREQ, UR, analyze_curve, scan_table,
 )
+from experiment_case import ExperimentCase, open_app, select_view
+
+def Experiment():
+    return ExperimentCase('lower_02_resonance')
+
 
 
 class ResonanceCalculations(unittest.TestCase):
@@ -129,33 +134,21 @@ class ResonanceCalculations(unittest.TestCase):
         self.assertEqual(fig.layout.yaxis.range[0], 0)
 
     def test_ui_calculates_cutoffs_after_voltage_edit(self):
-        from streamlit.testing.v1 import AppTest
-
-        def page():
-            import streamlit as st
-            from experiments.exp_lower_02_交流电路谐振 import Experiment
-
-            if 'experiment' not in st.session_state:
-                st.session_state.experiment = Experiment()
-            exp = st.session_state.experiment
-            exp.render_inputs()
-            exp.fill_data()
-            exp.calculate()
-
-        at = AppTest.from_function(page, default_timeout=10).run()
+        eid = 'lower_02_resonance'
+        at = open_app(eid)
         self.assertFalse(at.exception)
-        self.assertEqual(len(at.number_input), 1)  # 仅 R_L 输入，无人工截止频率项。
-        self.assertAlmostEqual(at.session_state.experiment.q[500][3], 3.762114596768661)
-        key = at.session_state.experiment.scan_keys[500]
-        at.session_state[f'lower_02_resonance_{key}_editor_0'] = {
-            'edited_rows': {13: {UR: 1200.0}}, 'added_rows': [], 'deleted_rows': [],
-        }
+        self.assertEqual(len(at.number_input), 1)
+        session = at.session_state['lab_sessions'][eid]
+        self.assertAlmostEqual(session.result.values['q'][500][3], 3.762114596768661)
+        key = session.result.values['scan_keys'][500]
+        index = list(session.inputs.tables).index(key)
+        at.session_state[f'{eid}:table:{index}:0'] = {'edited_rows': {13: {UR:1200.0}}, 'added_rows': [], 'deleted_rows': []}
         at.run()
         self.assertFalse(at.exception)
         self.assertFalse(at.error)
-        self.assertEqual(at.session_state.experiment.measured_f0[500], 2250)
-        curve = at.session_state.experiment.curves[500]
-        self.assertAlmostEqual(at.session_state.experiment.q[500][3], 2250 / curve['bandwidth'])
+        result = at.session_state['lab_sessions'][eid].result
+        self.assertEqual(result.values['measured_f0'][500], 2250)
+        self.assertAlmostEqual(result.values['q'][500][3],2250/result.values['curves'][500]['bandwidth'])
 
 
 if __name__ == '__main__':
