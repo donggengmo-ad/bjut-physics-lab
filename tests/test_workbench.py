@@ -21,11 +21,13 @@ class PublicContracts(unittest.TestCase):
                     before = backup_bytes(spec,state)
                     clean, issues = normalize(spec,state)
                     self.assertFalse(issues)
+                    clean_before = backup_bytes(spec, clean)
                     result = spec.compute(clean)
                     spec.explain(clean,result)
                     if spec.format_tables:
                         spec.format_tables(clean,result)
                     self.assertEqual(before,backup_bytes(spec,state))
+                    self.assertEqual(clean_before,backup_bytes(spec,clean))
 
     def test_all_csv_and_backup_roundtrips(self):
         for entry in EXPERIMENTS:

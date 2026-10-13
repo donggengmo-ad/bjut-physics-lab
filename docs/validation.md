@@ -9,7 +9,7 @@ MPLCONFIGDIR=/tmp/bjut-review-mpl MPLBACKEND=Agg .venv/bin/python -m unittest di
 git diff --check
 ```
 
-**61 项通过，0 失败；最后一轮 7.130 秒。** [完整测试日志](qa/tests.log)。原有 44 项场景保留了数值、文件和有效位数断言，UI 场景改用统一入口与页面切换。`tests/experiment_case.py` 是旧断言的测试夹具；生产代码中没有旧 Experiment 兼容类。
+**61 项通过，0 失败。** [完整测试日志](qa/tests.log)。原有 44 项场景保留了数值、文件和有效位数断言，UI 场景改用统一入口与页面切换。`tests/experiment_case.py` 是旧断言的测试夹具；生产代码中没有旧 Experiment 兼容类。
 
 新增覆盖：
 
