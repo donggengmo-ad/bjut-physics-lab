@@ -45,7 +45,7 @@ def analyze_curve(table):
     valid = table.dropna(subset=[FREQ, CURRENT])
     result = dict(f0=math.nan, imax=math.nan, level=math.nan,
                   f1=math.nan, f2=math.nan, bandwidth=math.nan,
-                  cutoff_error=None)
+                  peak_frequencies=(), peak_error=None, cutoff_error=None)
     if valid.empty:
         result['cutoff_error'] = '没有有效测量数据，无法确定截止频率。'
         return result
@@ -53,18 +53,25 @@ def analyze_curve(table):
     level = imax / math.sqrt(2)
     result.update(imax=imax, level=level)
     peaks = valid.index[valid[CURRENT] == imax]
+    result['peak_frequencies'] = tuple(float(table.loc[i, FREQ]) for i in peaks)
     if len(peaks) != 1:
-        result['cutoff_error'] = '最大电流对应多个测量频率，无法唯一确定谐振峰。'
+        frequencies_text = '、'.join(f'{f:g}' for f in result['peak_frequencies'])
+        result['peak_error'] = f'最大电流对应多个测量频率（{frequencies_text} Hz），无法唯一确定实测谐振频率 f₀；Q₄ 暂不能计算。'
+    else:
+        result['f0'] = result['peak_frequencies'][0]
+    first_peak, last_peak = int(peaks[0]), int(peaks[-1])
+    if imax <= 0:
+        result['cutoff_error'] = '没有正的峰值电流，无法确定半功率截止频率。'
         return result
-    peak = int(peaks[0])
-    result['f0'] = float(table.loc[peak, FREQ])
-    if peak in (0, len(table) - 1) or imax <= 0:
-        result['cutoff_error'] = '测量数据未覆盖谐振峰两侧，无法确定通频带宽。'
+    # 重复峰顶不影响半功率交点；但不能跨缺测或多个独立通频带取外侧包络。
+    peak_region = table.loc[first_peak:last_peak, CURRENT]
+    if peak_region.isna().any() or (peak_region <= level).any():
+        result['cutoff_error'] = '重复峰值之间存在缺测或电流降至截止电流及以下，无法唯一确定同一通频带。'
         return result
     frequencies = table[FREQ].to_numpy(dtype=float)
     currents = table[CURRENT].to_numpy(dtype=float)
     missing = []
-    for field, indices in [('f1', range(peak)), ('f2', range(peak, len(table) - 1))]:
+    for field, indices in [('f1', range(first_peak)), ('f2', range(last_peak, len(table) - 1))]:
         crossings = set()
         plateau = False
         for i in indices:
@@ -75,13 +82,26 @@ def analyze_curve(table):
                 plateau |= ia == level
             elif min(ia, ib) <= level <= max(ia, ib):
                 fa, fb = frequencies[i:i + 2]
-                crossings.add(float(fa + (level - ia) * (fb - fa) / (ib - ia)))
+                crossing = fa if ia == level else fb if ib == level else fa + (level - ia) * (fb - fa) / (ib - ia)
+                crossings.add(float(crossing))
         if len(crossings) == 1 and not plateau:
-            result[field] = crossings.pop()
-        else:
+            crossing = crossings.pop()
+            # 交点必须通过连续测量折线连到峰顶，且外侧进入半功率线以下。
+            # 仅与水平线相切、或跨缺测引用别段曲线的交点均不构成截止点。
+            if field == 'f1':
+                inside = currents[(frequencies > crossing) & (frequencies <= frequencies[first_peak])]
+                outside = currents[frequencies < crossing][-1:]
+            else:
+                inside = currents[(frequencies < crossing) & (frequencies >= frequencies[last_peak])]
+                outside = currents[frequencies > crossing][:1]
+            connected = np.isfinite(inside).all() and (inside > level).all()
+            exits_band = not len(outside) or (np.isfinite(outside).all() and (outside < level).all())
+            if connected and exits_band:
+                result[field] = crossing
+        if not math.isfinite(result[field]):
             missing.append(field)
     if missing:
-        result['cutoff_error'] = f'{"、".join(missing)}：测量点连线与截止电流水平线没有唯一交点。'
+        result['cutoff_error'] = f'{"、".join(missing)}：未测得与峰值连续相连、且唯一的半功率截止交点（可能缺测、未覆盖、相切或有多个交点）。'
     if math.isfinite(result['f1']) and math.isfinite(result['f2']):
         result['bandwidth'] = abs(result['f2'] - result['f1'])
     return result
@@ -140,6 +160,8 @@ def compute(inputs):
         measured_f0[resistance] = curve['f0']
         q[resistance] = quality_factors(resistance, rl, float(voltage.loc[resistance, UL]),
                                         float(voltage.loc[resistance, UC]), 1., .1, theoretical_f0, curve)
+        if curve['peak_error']:
+            notes.append(f'R={resistance} Ω：{curve["peak_error"]}')
         if curve['cutoff_error']:
             notes.append(f'R={resistance} Ω：{curve["cutoff_error"]}')
     table3 = inputs.tables[VOLTAGE_KEY].copy()
@@ -192,6 +214,8 @@ def explain(inputs, result):
         curve = data_curves[resistance]
         if math.isfinite(curve['level']):
             doc.latex(rf'I_{{\max}}={curve["imax"]:.4g}\,\mathrm{{mA}},\quad I_{{\mathrm{{截止}}}}=\frac{{{curve["imax"]:.4g}}}{{\sqrt2}}={curve["level"]:.4g}\,\mathrm{{mA}}')
+        if curve['peak_error']:
+            doc.warning(f'R={resistance} Ω：{curve["peak_error"]}')
         if curve['cutoff_error']:
             doc.warning(f'R={resistance} Ω：{curve["cutoff_error"]}')
         for label, field in [('1', 'f1'), ('2', 'f2')]:

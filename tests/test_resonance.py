@@ -2,6 +2,7 @@ import io
 import math
 import unittest
 
+import numpy as np
 import pandas as pd
 
 from experiments.exp_lower_02_交流电路谐振 import (
@@ -74,6 +75,194 @@ class ResonanceCalculations(unittest.TestCase):
         self.assertIsNotNone(result['cutoff_error'])
         self.assertTrue(math.isnan(result['f1']))
         self.assertTrue(math.isnan(result['bandwidth']))
+
+    def test_repeated_peak_top_without_cutoff_coverage(self):
+        values = [945, 946, 947, 947, 947, 947, 946, 945]
+        table = scan_table(pd.DataFrame({FREQ: list(range(2200, 2280, 10)), UR: values}), 500)
+        result = analyze_curve(table)
+        self.assertEqual(result['peak_frequencies'], (2220, 2230, 2240, 2250))
+        self.assertAlmostEqual(result['imax'], 947 / 500)
+        self.assertTrue(math.isnan(result['f0']))
+        self.assertTrue(math.isnan(result['bandwidth']))
+        self.assertIsNotNone(result['peak_error'])
+        self.assertIsNotNone(result['cutoff_error'])
+
+    def test_repeated_peak_preserves_cutoffs_and_plot_labels(self):
+        # 将用户峰顶片段嵌入测试用完整扫描，不修改默认测量记录。
+        key = self.exp.scan_keys[500]
+        table = self.exp.initial_df[key].copy()
+        values = [945, 946, 947, 947, 947, 947, 946, 945]
+        table.loc[table[FREQ].between(2200, 2300), UR] = values + [944, 943, 942]
+        self.exp.set_initial_df(table, key)
+        self.exp.fill_data()
+        result = self.exp.curves[500]
+        level_mv = 947 / math.sqrt(2)
+        lower = 1800 + (level_mv - 608) * 100 / (703 - 608)
+        upper = 2700 + (level_mv - 671) * 100 / (605 - 671)
+        self.assertAlmostEqual(result['f1'], lower)
+        self.assertAlmostEqual(result['f2'], upper)
+        self.assertAlmostEqual(result['bandwidth'], upper - lower)
+        self.assertIsNone(result['cutoff_error'])
+        self.assertTrue(math.isnan(result['f0']))
+        self.assertTrue(math.isnan(self.exp.q[500][3]))
+        self.assertTrue(all(math.isfinite(v) for v in self.exp.q[500][:3]))
+        labels = [a for a in self.exp.build_plot().layout.annotations
+                  if a.xref == 'x' and a.text.startswith('R=500 Ω')]
+        self.assertEqual(len(labels), 2)
+        for label, expected in zip(labels, [lower, upper]):
+            self.assertAlmostEqual(label.x, expected)
+        pd.testing.assert_frame_equal(self.exp.initial_df[key], table, check_dtype=False)
+
+    def test_separated_repeated_peaks_do_not_bridge_passbands_or_missing_values(self):
+        for middle in (1, math.nan, 4 / math.sqrt(2)):
+            with self.subTest(middle=middle):
+                table = pd.DataFrame({FREQ: [100, 200, 300, 400, 500],
+                                      CURRENT: [1, 4, middle, 4, 1]})
+                result = analyze_curve(table)
+                self.assertIsNotNone(result['cutoff_error'])
+                self.assertTrue(math.isnan(result['bandwidth']))
+
+    def test_gap_between_crossing_and_peak_invalidates_only_affected_side(self):
+        for values, missing_field, valid_field in [
+            ([1, 3, math.nan, 4, 2, 1], 'f1', 'f2'),
+            ([1, 2, 4, math.nan, 3, 1], 'f2', 'f1'),
+        ]:
+            with self.subTest(values=values):
+                curve = analyze_curve(pd.DataFrame({FREQ: np.arange(1, 7) * 100, CURRENT: values}))
+                self.assertTrue(math.isnan(curve[missing_field]))
+                self.assertTrue(math.isfinite(curve[valid_field]))
+                self.assertTrue(math.isnan(curve['bandwidth']))
+
+    def test_tangent_contacts_are_not_cutoff_boundaries(self):
+        level = 4 / math.sqrt(2)
+        curve = analyze_curve(pd.DataFrame({FREQ: np.arange(1, 8) * 100,
+                                            CURRENT: [3, level, 3, 4, 3, level, 3]}))
+        self.assertTrue(math.isnan(curve['f1']))
+        self.assertTrue(math.isnan(curve['f2']))
+        self.assertTrue(math.isnan(curve['bandwidth']))
+
+    def test_peak_at_scan_edge_keeps_other_cutoff(self):
+        for values, missing_field, valid_field in [
+            ([4, 3, 2, 1], 'f1', 'f2'),
+            ([1, 2, 3, 4], 'f2', 'f1'),
+            ([4, 4, 2, 1], 'f1', 'f2'),
+        ]:
+            with self.subTest(values=values):
+                curve = analyze_curve(pd.DataFrame({FREQ: [100, 200, 300, 400], CURRENT: values}))
+                self.assertTrue(math.isnan(curve[missing_field]))
+                self.assertTrue(math.isfinite(curve[valid_field]))
+                self.assertTrue(math.isnan(curve['bandwidth']))
+
+    def test_half_power_plateau_is_ambiguous_but_exact_endpoint_is_valid(self):
+        peak = 2 * math.sqrt(2)
+        curve = analyze_curve(pd.DataFrame({FREQ: [100, 200, 300, 400, 500, 600],
+                                            CURRENT: [1, 2, 2, peak, 2, 1]}))
+        self.assertTrue(math.isnan(curve['f1']))
+        self.assertEqual(curve['f2'], 500)
+        curve = analyze_curve(pd.DataFrame({FREQ: [100, 200, 300], CURRENT: [2, peak, 2]}))
+        self.assertEqual((curve['f1'], curve['f2'], curve['bandwidth']), (100, 300, 200))
+
+    def test_empty_flat_and_short_scans_do_not_invent_bandwidth(self):
+        for values in ([], [math.nan] * 5, [0] * 5, [1] * 5, [3], [2, 3]):
+            with self.subTest(values=values):
+                curve = analyze_curve(pd.DataFrame({FREQ: np.arange(1, len(values) + 1) * 100,
+                                                    CURRENT: values}))
+                self.assertTrue(math.isnan(curve['bandwidth']))
+                self.assertIsNotNone(curve['cutoff_error'])
+
+    def test_missing_samples_outside_passband_do_not_destroy_valid_cutoffs(self):
+        curve = analyze_curve(pd.DataFrame({FREQ: np.arange(1, 8) * 100,
+                                            CURRENT: [math.nan, 1, 3, 4, 3, 1, math.nan]}))
+        self.assertTrue(math.isfinite(curve['bandwidth']))
+        self.assertIsNone(curve['cutoff_error'])
+
+    def test_close_but_unequal_peaks_remain_distinct(self):
+        curve = analyze_curve(pd.DataFrame({FREQ: [100, 200, 300, 400],
+                                            CURRENT: [1, 4, 4 + 1e-10, 1]}))
+        self.assertEqual(curve['f0'], 300)
+        self.assertIsNone(curve['peak_error'])
+        self.assertTrue(math.isfinite(curve['bandwidth']))
+
+    def test_separated_equal_maxima_in_one_connected_passband(self):
+        curve = analyze_curve(pd.DataFrame({FREQ: [100, 200, 300, 400, 500],
+                                            CURRENT: [1, 4, 3, 4, 1]}))
+        self.assertTrue(math.isnan(curve['f0']))
+        self.assertTrue(math.isfinite(curve['bandwidth']))
+        self.assertIsNone(curve['cutoff_error'])
+
+    def test_seeded_scans_match_independent_interpolation(self):
+        rng = np.random.default_rng(20261017)
+        for case in range(200):
+            plateau_size = int(rng.integers(1, 7))
+            currents = np.array([.2, .6, .9] + [1.] * plateau_size + [.85, .5, .1])
+            currents *= float(rng.uniform(.001, 100))
+            frequencies = np.cumsum(rng.uniform(1, 150, len(currents))) + 100
+            table = pd.DataFrame({FREQ: frequencies, CURRENT: currents})
+            before = table.copy(deep=True)
+            curve = analyze_curve(table)
+            level = max(currents) / math.sqrt(2)
+            lower = frequencies[1] + (level - currents[1]) / (currents[2] - currents[1]) * (frequencies[2] - frequencies[1])
+            i = 3 + plateau_size
+            upper = frequencies[i] + (level - currents[i]) / (currents[i+1] - currents[i]) * (frequencies[i+1] - frequencies[i])
+            with self.subTest(case=case, plateau_size=plateau_size):
+                self.assertAlmostEqual(curve['f1'], lower)
+                self.assertAlmostEqual(curve['f2'], upper)
+                self.assertAlmostEqual(curve['bandwidth'], upper - lower)
+                self.assertEqual(math.isfinite(curve['f0']), plateau_size == 1)
+                pd.testing.assert_frame_equal(before, table)
+
+    def test_scan_rejects_nonfinite_negative_or_duplicate_inputs(self):
+        for column, value in [(UR, math.inf), (UR, -math.inf), (UR, -1),
+                               (FREQ, math.inf), (FREQ, math.nan), (FREQ, 0), (FREQ, 100)]:
+            with self.subTest(column=column, value=value):
+                table = pd.DataFrame({FREQ: [100, 200, 300], UR: [1, 3, 1]})
+                table.loc[1, column] = value
+                with self.assertRaises(ValueError):
+                    scan_table(table, 500)
+
+    def test_edge_cases_flow_through_session_explanation_and_report_exports(self):
+        from core.session import ExperimentSession
+        from core.plots import report_from_plotly
+        from ui.charts import figure_bytes
+        scenarios = {
+            'blank': [], 'zero': [0] * 6, 'flat': [400] * 6,
+            'single': [400], 'repeated': [100, 400, 400, 100],
+            'left_edge': [400, 300, 100], 'right_edge': [100, 300, 400],
+            'disconnected': [100, 400, math.nan, 400, 100],
+            'gap_before_peak': [100, 300, math.nan, 400, 100],
+            'tangent': [300, 400 / math.sqrt(2), 300, 400, 300, 400 / math.sqrt(2), 300],
+        }
+        spec = self.exp.spec
+        session = ExperimentSession.create(spec)
+        for name, values in scenarios.items():
+            with self.subTest(scenario=name):
+                for key in self.exp.scan_keys.values():
+                    frame = session.inputs.tables[key].copy()
+                    frame[UR] = values + [math.nan] * (len(frame) - len(values))
+                    session.edit_table(key, frame)
+                session.evaluate(spec)
+                self.assertIsNotNone(session.result)
+                self.assertFalse(any(issue.severity == 'error' for issue in session.issues))
+                doc = spec.explain(session.normalized, session.result)
+                for block in doc.blocks:
+                    if block.kind == 'latex':
+                        self.assertNotIn('nan', str(block.body).lower())
+                        self.assertNotIn('inf', str(block.body).lower())
+                plot = spec.build_plot(session.normalized, session.result)
+                expected = [curve[field] for curve in session.result.values['curves'].values()
+                            for field in ('f1', 'f2') if math.isfinite(curve[field])]
+                labels = [a for a in plot.layout.annotations if a.xref == 'x' and a.yref == 'y']
+                self.assertEqual([a.x for a in labels], expected)
+                report = report_from_plotly(plot)
+                try:
+                    png = figure_bytes(report, 'png')
+                    svg = figure_bytes(report, 'svg')
+                    self.assertTrue(png.startswith(b'\x89PNG'))
+                    self.assertIn(b'<svg', svg)
+                    for label in labels:
+                        self.assertIn(label.text.split('<br>')[1].encode(), svg)
+                finally:
+                    report.clear()
 
     def test_incomplete_scan_leaves_q4_blank_but_computes_other_q_values(self):
         for resistance in (100, 500):
