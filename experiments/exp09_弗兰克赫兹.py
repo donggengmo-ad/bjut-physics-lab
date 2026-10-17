@@ -185,20 +185,22 @@ def explain(inputs,result):
 
 
 def build_plot(inputs,result):
+    from core.fonts import report_style
     from matplotlib.figure import Figure
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     frame=result.tables[KEY]
     r=result.values
-    fig=Figure(figsize=(8,5.4),layout='constrained',facecolor='white')
-    FigureCanvasAgg(fig)
-    ax=fig.subplots()
-    ax.plot(frame[VOLTAGE],frame[CURRENT],color='#0969DA',marker='o',markersize=3,linewidth=1.2,label='Measurements')
-    ax.scatter(r['peaks_v'],r['peaks_i'],color='#D55E00',marker='D',s=30,zorder=3,label=f'Peaks ({2*r["n"]})')
-    for v,i in zip(r['peaks_v'],r['peaks_i']):
-        ax.annotate(f'{v:.1f} V',(v,i),xytext=(0,7),textcoords='offset points',ha='center',fontsize=8)
-    ax.set(xlabel=r'$V_{G2K}$ / V',ylabel=r'$I_p$ / (10 nA)',title='Franck–Hertz curve',facecolor='white')
-    ax.legend();ax.grid(alpha=.25)
-    ax.spines[['top','right']].set_visible(False)
+    with report_style():
+        fig=Figure(figsize=(8,5.4),layout='constrained',facecolor='white')
+        FigureCanvasAgg(fig)
+        ax=fig.subplots()
+        ax.plot(frame[VOLTAGE],frame[CURRENT],color='#0969DA',marker='o',markersize=3,linewidth=1.2,label='Measurements')
+        ax.scatter(r['peaks_v'],r['peaks_i'],color='#D55E00',marker='D',s=30,zorder=3,label=f'Peaks ({2*r["n"]})')
+        for v,i in zip(r['peaks_v'],r['peaks_i']):
+            ax.annotate(f'{v:.1f} V',(v,i),xytext=(0,7),textcoords='offset points',ha='center',fontsize=8)
+        ax.set(xlabel=r'$V_{G2K}$ / V',ylabel=r'$I_p$ / (10 nA)',title='Franck–Hertz curve',facecolor='white')
+        ax.legend();ax.grid(alpha=.25)
+        ax.spines[['top','right']].set_visible(False)
     return fig
 
 

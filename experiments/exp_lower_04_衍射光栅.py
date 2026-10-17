@@ -258,21 +258,13 @@ def explain(inputs, result):
     return doc
 
 def build_plot(inputs, result):
-    import matplotlib.font_manager as fm
-    import matplotlib as mpl
+    from core.fonts import report_style
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     from matplotlib.figure import Figure
     data_final_df = result.tables
     data_input_key = result.values['input_key']
     frame = data_final_df[data_input_key]
-    available = {font.name for font in fm.fontManager.ttflist}
-    font = next((name for name in ('Noto Sans CJK SC', 'Source Han Sans SC', 'SimHei',
-                                  'Microsoft YaHei', 'PingFang SC', 'Heiti SC',
-                                  'Arial Unicode MS') if name in available), None)
-    with mpl.rc_context({
-        'font.family': font or 'DejaVu Sans', 'font.size': 10, 'figure.facecolor': 'white', 'axes.facecolor': 'white',
-        'axes.unicode_minus': False, 'pdf.fonttype': 42, 'svg.fonttype': 'none',
-    }):
+    with report_style():
         # Streamlit 在工作线程中执行；直接用 Agg 画布，不创建桌面 GUI 窗口。
         fig = Figure(figsize=(7.2, 4.8), dpi=100, layout='constrained')
         FigureCanvasAgg(fig)
@@ -282,9 +274,10 @@ def build_plot(inputs, result):
             # 不跨过缺失值连线，也不由理论值补造测量点。
             ax.plot(group[WAVE], group[PHI], color=color, marker=marker, linestyle=line,
                     linewidth=1.5, markersize=4.5, label=f'k = {order}')
-        ax.set_title('衍射光栅的色散曲线' if font else 'Diffraction grating dispersion curves', pad=32)
-        ax.set_xlabel(r'波长 $\lambda$ / nm' if font else r'Wavelength $\lambda$ / nm')
-        ax.set_ylabel(r'衍射角 $\varphi$ / °' if font else r'Diffraction angle $\varphi$ / °')
+        ax.set_title('衍射光栅的色散曲线', pad=32)
+        # 中文与简单希腊符号走逐字字体回退，避免 MathText 将整段中文交给拉丁字体。
+        ax.set_xlabel('波长 λ / nm')
+        ax.set_ylabel('衍射角 φ / °')
         ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.01), ncol=2, frameon=False)
         ax.grid(alpha=0.25)
         ax.margins(x=0.06, y=0.10)

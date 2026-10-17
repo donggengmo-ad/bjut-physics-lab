@@ -2,22 +2,7 @@
 import re
 import base64
 import numpy as np
-from contextlib import contextmanager
-
-
-@contextmanager
-def report_style():
-    import matplotlib as mpl
-    from matplotlib import font_manager
-    available = {font.name for font in font_manager.fontManager.ttflist}
-    font = next((name for name in ('Noto Sans CJK SC','Source Han Sans SC','SimHei',
-                                   'Microsoft YaHei','PingFang SC','Heiti SC','Arial Unicode MS')
-                 if name in available),'DejaVu Sans')
-    with mpl.rc_context({'font.family':font,'font.size':11,'figure.facecolor':'white',
-                         'axes.facecolor':'white','text.color':'#1F2328','axes.labelcolor':'#1F2328',
-                         'xtick.color':'#1F2328','ytick.color':'#1F2328','axes.unicode_minus':False,
-                         'svg.fonttype':'none','pdf.fonttype':42}):
-        yield
+from core.fonts import report_style
 
 
 def plain(text):

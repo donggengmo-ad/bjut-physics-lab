@@ -4,12 +4,24 @@ import streamlit as st
 
 
 def figure_bytes(figure, format):
+    from core.fonts import apply_report_fonts, report_style
     buffer = BytesIO()
-    figure.savefig(buffer, format=format, dpi=200, facecolor='white', bbox_inches='tight')
+    with report_style():
+        apply_report_fonts(figure)
+        figure.savefig(buffer, format=format, dpi=200, facecolor='white', bbox_inches='tight')
     return buffer.getvalue()
 
 
 def render_chart(spec, session):
+    from core.fonts import report_fonts
+    fonts = report_fonts()
+    font_policy = ('song-times-v1\0' + '\0'.join(fonts.families)).encode()
+    if session.exports.get('plot:font-policy') != font_policy:
+        # 热更新字体规则后丢弃旧图片，避免相同输入仍下载到上一个字体版本。
+        for key in list(session.exports):
+            if key.startswith('plot:'):
+                del session.exports[key]
+        session.exports['plot:font-policy'] = font_policy
     if spec.plot_kind == 'matplotlib':
         if 'plot:preview' not in session.exports:
             figure = spec.build_plot(session.normalized, session.result)
@@ -52,3 +64,4 @@ def render_chart(spec, session):
                     file_name=f'{spec.id}.{format}',mime=mime,on_click='ignore',
                     key=f'{spec.id}:plot:{format}:{session.inputs.revision}')
     st.caption('报告图片统一白底，包含当前输入对应的曲线、单位和实验标注。')
+    st.caption(fonts.caption)

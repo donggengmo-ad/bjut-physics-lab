@@ -2,6 +2,8 @@
 
 bjut 物理实验课的数据处理小工具。输入测量记录后，自动整理结果、公式代入和实验图表。
 
+所有 Matplotlib 预览及报告图片统一采用中文宋体、英文／数字 Times New Roman；环境缺少指定字体时，使用项目自带的思源宋体和 Liberation Serif，并在图表页提示实际字体。字体来源与许可证见 [assets/fonts](assets/fonts/README.md)，开发要求见 [架构说明](docs/architecture.md)。
+
 ## 支持的实验
 
 - 上册：弹性模量、扭摆、非均匀磁场、分光计、牛顿环、弗兰克–赫兹。

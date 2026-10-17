@@ -59,4 +59,8 @@ JSON 格式版本为 1，字段为 `schema_version`、`experiment_id`、`tables`
 6. 在 `EXPERIMENTS` 追加元数据，在 `app_pages` 新建调用 `render_experiment(ID)` 的薄页面。通用工作台无需新增分支。
 7. 至少验证默认、空白、部分缺测、非法值、文件往返、不修改输入，以及实际入口。涉及新交互时做真实浏览器录入测试。
 
-Matplotlib 使用 `Figure` 和 `FigureCanvasAgg`，避免 `pyplot.subplots()` 注册全局窗口；导出后清理图对象。新增绘图样式应复用 `core.plots.report_style`。
+Matplotlib 使用 `Figure` 和 `FigureCanvasAgg`，避免 `pyplot.subplots()` 注册全局窗口；导出后清理图对象。全部 Matplotlib 绘图在 `core.fonts.report_style()` 中创建，保存统一走 `ui.charts.figure_bytes`，不能各实验自行查找并覆盖字体。Plotly 的白底报告转换也遵循同一规则。
+
+字体由 `core.fonts` 逐进程注册和选择：中文优先 SimSun／Songti SC，英文及数字优先 Times New Roman；列表顺序为拉丁字体在前、中文字体在后，数学表达式采用相同拉丁字体及 STIX 符号兜底。缺少指定字体时使用 `assets/fonts` 自带的思源宋体／Liberation Serif，界面显示实际名称及替代提示。后者是 Times New Roman 度量兼容的开源字体，不等于安装了 Times New Roman。部署不依赖运行时下载或操作系统安装中文字体。
+
+字体源文件保持原样，随附许可证和 `sources.json` 的下载来源、SHA-256；系统商业字体仅本机使用，不随仓库分发。PNG 固化像素，SVG 转路径、PDF 嵌入字体，避免接收端字体不同导致乱码。字体测试须验证实际字形解析、混排、符号、全部可绘图实验，以及只有项目字体可用时的渲染；不能只检查 rcParams 字符串。修改图后将 missing-glyph 警告作为失败，并检查渲染图中文字是否裁切或重叠。
