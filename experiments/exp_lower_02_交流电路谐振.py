@@ -258,6 +258,14 @@ def build_plot(inputs, result):
             if math.isfinite(curve[field]):
                 fig.add_shape(type='line', x0=curve[field], x1=curve[field], y0=0,
                               y1=curve['level'], line={'color': color, 'dash': 'dash', 'width': 2})
+                fig.add_annotation(
+                    x=curve[field], y=curve['level'], xref='x', yref='y',
+                    text=f'R={resistance} Ω<br>{"f₁" if field == "f1" else "f₂"}={curve[field]:.2f} Hz',
+                    showarrow=True, arrowhead=2, arrowcolor=color,
+                    ax=-45 if field == 'f1' else 45,
+                    ay=-65 if resistance == 100 else -85,
+                    xanchor='right' if field == 'f1' else 'left',
+                    font={'color': color, 'size': 13}, align='center')
                 cutoff_ticks.add(curve[field])
     minimum = min(frame[FREQ].min() for key, frame in data_final_df.items() if key in data_scan_keys.values())
     maximum = max(frame[FREQ].max() for key, frame in data_final_df.items() if key in data_scan_keys.values())

@@ -133,6 +133,24 @@ class ResonanceCalculations(unittest.TestCase):
             self.assertIn(f'{line.x0:.2f}', fig.layout.xaxis.ticktext[tick_index])
         self.assertEqual(fig.layout.yaxis.range[0], 0)
 
+    def test_cutoff_labels_survive_report_export(self):
+        from core.plots import report_from_plotly
+        fig = self.exp.build_plot()
+        labels = [a for a in fig.layout.annotations if a.xref == 'x' and a.yref == 'y']
+        self.assertEqual(len(labels), 4)
+        for label, (resistance, field) in zip(labels, [(r, f) for r in (100, 500) for f in ('f1', 'f2')]):
+            curve = self.exp.curves[resistance]
+            self.assertEqual((label.x, label.y), (curve[field], curve['level']))
+            self.assertIn(f'R={resistance} Ω', label.text)
+            self.assertIn(f'{"f₁" if field == "f1" else "f₂"}={curve[field]:.2f} Hz', label.text)
+        report = report_from_plotly(fig)
+        try:
+            text = '\n'.join(item.get_text() for item in report.axes[0].texts)
+            for label in labels:
+                self.assertIn(label.text.replace('<br>', '\n'), text)
+        finally:
+            report.clear()
+
     def test_ui_calculates_cutoffs_after_voltage_edit(self):
         eid = 'lower_02_resonance'
         at = open_app(eid)

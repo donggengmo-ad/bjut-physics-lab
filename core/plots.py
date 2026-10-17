@@ -21,7 +21,7 @@ def report_style():
 
 
 def plain(text):
-    return re.sub('<[^>]+>', '', text or '')
+    return re.sub('<[^>]+>', '', re.sub(r'<br\s*/?>', '\n', text or ''))
 
 
 def numeric_values(values):
@@ -57,6 +57,16 @@ def report_from_plotly(plot):
                 transform=ax.transAxes if annotation.yref=='paper' else ax.get_yaxis_transform()
                 ax.text(annotation.x,annotation.y,plain(annotation.text),transform=transform,
                         ha='right' if annotation.x>=.9 else 'center',fontsize=9)
+            elif annotation.xref == 'x' and annotation.yref == 'y':
+                # Plotly 的像素偏移向下为正，Matplotlib 的点偏移向上为正。
+                color = annotation.font.color or '#1F2328'
+                ax.annotate(plain(annotation.text), xy=(annotation.x, annotation.y),
+                            xytext=((annotation.ax or 0) * .75, -(annotation.ay or 0) * .75),
+                            textcoords='offset points',
+                            ha={'left':'left','right':'right'}.get(annotation.xanchor,'center'),
+                            va='center', fontsize=9, color=color,
+                            arrowprops={'arrowstyle':'->','color':color,'linewidth':1}
+                            if annotation.showarrow else None)
         ax.set_title(plain(plot.layout.title.text),pad=18)
         ax.set_xlabel(plain(plot.layout.xaxis.title.text));ax.set_ylabel(plain(plot.layout.yaxis.title.text))
         if plot.layout.xaxis.tickvals:
