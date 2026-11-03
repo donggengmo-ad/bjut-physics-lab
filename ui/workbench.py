@@ -49,7 +49,11 @@ def render_experiment(experiment_id):
     if spec.build_plot is not None:
         names.append('图表')
     names.append('实验说明')
-    tabs = st.tabs(names, default=session.active_view, key=f'{spec.id}:view', on_change='rerun')
+    view_key = f'{spec.id}:view'
+    if view_key not in st.session_state:
+        st.session_state[view_key] = session.active_view
+    # default 参与 Streamlit 的控件身份，不能跟随当前标签变化，否则下一次点击会回跳。
+    tabs = st.tabs(names, default=names[0], key=view_key, on_change='rerun')
     for name, tab in zip(names, tabs):
         if not tab.open:
             continue

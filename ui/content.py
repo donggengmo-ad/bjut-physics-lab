@@ -5,6 +5,8 @@ def render_document(document):
     for block in document.blocks:
         if block.kind == 'table':
             st.table(block.body, hide_index=True)
+        elif block.kind == 'image':
+            st.image(block.body, width='stretch')
         elif block.kind == 'latex':
             st.latex(block.body)
         elif block.kind == 'markdown':

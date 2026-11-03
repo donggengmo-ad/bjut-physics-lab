@@ -1,0 +1,58 @@
+[
+  {
+    "file": "1000459835.jpg",
+    "report_page": 54,
+    "source": "user-attached image, 2026-10-27",
+    "sha256": null,
+    "file_status": "original not currently present at supplied filesystem path; transcribed from attached image"
+  },
+  {
+    "file": "1000459836.jpg",
+    "report_page": 55,
+    "source": "user-attached image, 2026-10-27",
+    "sha256": null,
+    "file_status": "original not currently present at supplied filesystem path; transcribed from attached image"
+  },
+  {
+    "file": "1000459837.jpg",
+    "report_page": 56,
+    "source": "user-attached image, 2026-10-27",
+    "sha256": null,
+    "file_status": "original not currently present at supplied filesystem path; transcribed from attached image"
+  },
+  {
+    "file": "1000459838.jpg",
+    "report_page": 57,
+    "source": "user-attached image, 2026-10-27",
+    "sha256": null,
+    "file_status": "original not currently present at supplied filesystem path; transcribed from attached image"
+  },
+  {
+    "file": "1000459839.jpg",
+    "report_page": 58,
+    "source": "user-attached image, 2026-10-27",
+    "sha256": null,
+    "file_status": "original not currently present at supplied filesystem path; transcribed from attached image"
+  },
+  {
+    "file": "IMG_20261027_160924.jpg",
+    "source": "user-attached teacher supplement, 2026-10-27",
+    "sha256": "0daaaa945655c05295716c82da2970508f8fe4d339633dedc5c88bcbd377a830"
+  },
+  {
+    "file": "IMG_20261027_160459.jpg",
+    "source": "user-attached teacher supplement, 2026-10-27",
+    "sha256": "fb7399aae1118ab769184ccc38f88b73bec7ec1cc2a64d84b854640fe73fc1a7"
+  },
+  {
+    "file": "IMG_20261027_160936.jpg",
+    "source": "user-attached teacher supplement, 2026-10-27",
+    "sha256": "f2e6d59c044d2fc7675ffdbe60ec15a3bac0f8c93c79fc3524c07d1f92508e0b"
+  },
+  {
+    "file": "lower_08_thermistor.json",
+    "source": "user-measured default example, 2026-10-27",
+    "repository_copy": "experiments/examples/lower_08_thermistor.json",
+    "sha256": "6e81ff8bc23ba1677742b95fb8a263845e56a69506d25f6d3f85032322690e8d"
+  }
+]

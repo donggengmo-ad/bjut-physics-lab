@@ -12,6 +12,16 @@ from experiment_case import open_app, select_view
 
 
 class PublicContracts(unittest.TestCase):
+    def test_student_content_does_not_expose_development_conversation(self):
+        forbidden=('按用户最新确认','按用户最新要求','用户已确认玻璃温度计分度','本次为用户允许','AI 修改')
+        for entry in EXPERIMENTS:
+            spec=get_spec(entry.id);state=spec.initial_state();result=spec.compute(state)
+            document=spec.explain(state,result)
+            text='\n'.join([spec.description,spec.introduction,spec.discussion,spec.plot_caption,*result.notes,
+                            *(str(b.body) for b in document.blocks if b.kind not in ('image','table'))])
+            with self.subTest(experiment=entry.id):
+                for phrase in forbidden:self.assertNotIn(phrase,text)
+
     def test_all_defaults_and_blanks_are_pure_and_renderable(self):
         for entry in EXPERIMENTS:
             spec = get_spec(entry.id)

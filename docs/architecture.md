@@ -5,7 +5,7 @@
 ```text
 app.py                   导航、侧栏、应用入口
 app_pages/*.py           每页两行，调用公共工作台
-experiments/__init__.py   10 项轻量注册表，按 ID 延迟加载定义
+experiments/__init__.py   显式轻量注册表，按 ID 延迟加载定义
 experiments/exp*.py       输入定义、专业校验、纯计算、显示规则、实验内容
 core/models.py           数据类契约
 core/session.py          每个会话、每个实验的草稿及当前结果版本
@@ -40,6 +40,8 @@ ui/                      通用输入、文件操作、状态、结果、图表
 输入变更立即清除旧结果和导出字节，并递增 revision。`evaluate` 对相同 revision 不重复计算。无效输入保留草稿、阻止计算且不显示旧结果；异常写入日志，页面仅显示简明反馈。
 
 结果标签使用 `st.tabs(..., on_change='rerun')` 与 `.open`。输入始终在标签页外渲染。未打开图表不调用绘图；打开后仅缓存当前版本的 JSON／图片字节，不缓存 Matplotlib Figure。每个实验最多保留当前版本的结果和下载内容，计算次数可用于回归观测。
+
+`st.tabs` 的 `default` 参与控件身份，须保持为固定首项，不能逐轮设成当前标签；章节返回时只在 widget key 尚不存在时，从独立会话的 `active_view` 初始化。否则原生浏览器操作会出现标签回跳，而仅注入 Session State 的测试可能发现不了。
 
 ## 文件协议
 

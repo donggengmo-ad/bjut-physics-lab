@@ -100,7 +100,7 @@ class DisplayTable:
 
 @dataclass(frozen=True)
 class Block:
-    kind: Literal['markdown', 'latex', 'caption', 'info', 'warning', 'table']
+    kind: Literal['markdown', 'latex', 'caption', 'info', 'warning', 'table', 'image']
     body: Any
 
 
@@ -126,6 +126,9 @@ class Explanation:
 
     def table(self, frame: pd.DataFrame) -> None:
         self.blocks.append(Block('table', frame))
+
+    def image(self, svg: str) -> None:
+        self.blocks.append(Block('image', svg))
 
 
 def no_issues(inputs: InputState) -> list[ValidationIssue]:

@@ -72,7 +72,13 @@ class ReportFontTests(unittest.TestCase):
                 with self.subTest(experiment=entry.id), warnings.catch_warnings(record=True) as caught, self.assertNoLogs('matplotlib', level='WARNING'):
                     warnings.simplefilter('always')
                     state = spec.initial_state()
-                    plot = spec.build_plot(state, spec.compute(state))
+                    result = spec.compute(state)
+                    document = spec.explain(state, result)
+                    for block in document.blocks:
+                        if block.kind == 'image':
+                            self.assertIn('<svg', block.body)
+                            self.assertNotIn('<text', block.body)
+                    plot = spec.build_plot(state, result)
                     figure = plot if spec.plot_kind == 'matplotlib' else report_from_plotly(plot)
                     try:
                         apply_report_fonts(figure)

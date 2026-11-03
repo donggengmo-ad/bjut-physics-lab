@@ -23,9 +23,11 @@ EXPERIMENTS = (
     ExperimentEntry('lower_04_diffraction_grating', '下册', 4, '衍射光栅', 'exp_lower_04_衍射光栅', 'flare'),
     ExperimentEntry('lower_05_sound_speed', '下册', 5, '声速测量', 'exp_lower_05_声速测量', 'waves'),
     ExperimentEntry('lower_06_millikan_oil_drop', '下册', 6, '密立根油滴', 'exp_lower_06_密立根油滴', 'water_drop'),
+    ExperimentEntry('lower_08_thermistor', '下册', 8, '热敏电阻温度计', 'exp_lower_08_热敏电阻温度计', 'thermostat'),
+    ExperimentEntry('lower_09_solar_cell', '下册', 9, '太阳能电池特性的测量', 'exp_lower_09_太阳能电池', 'solar_power'),
 )
 
-@lru_cache(maxsize=10)
+@lru_cache(maxsize=len(EXPERIMENTS))
 def get_spec(experiment_id):
     entry = next((e for e in EXPERIMENTS if e.id == experiment_id), None)
     if entry is None:
