@@ -14,3 +14,47 @@ __pycache__/
 *.csv
 *.xlsx
 data/
+
+# Agent 本地指令、配置和会话
+AGENT.md
+AGENTS.md
+.agent/
+.agents/
+.codex/
+.claude/
+CLAUDE.md
+GEMINI.md
+
+# 操作系统杂项
+.DS_Store
+._*
+Thumbs.db
+
+# Python 工具与构建缓存
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+build/
+dist/
+*.egg-info/
+
+# 本地密钥与环境配置
+.env
+.env.*
+!.env.example
+!.env.*.example
+.streamlit/secrets.toml
+
+# 临时输出；已归档的验收日志继续保留
+*.log
+!docs/qa/tests.log
+*.tmp
+*.swp
+*.swo
+*~
